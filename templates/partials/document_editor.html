@@ -1,0 +1,23 @@
+<div id="editor-area" class="card" x-data="{ preview: {{ rendered|tojson }} }">
+  {% if saved is defined and saved %}<p style="margin:0 0 0.5rem;"><span class="chip status-ok">Zapisano ✓</span></p>{% endif %}
+  <form hx-put="/documents/{{ doc.id }}" hx-target="#editor-area" hx-swap="outerHTML">
+    <label for="doc-title">Tytuł</label>
+    <input id="doc-title" type="text" name="title" value="{{ doc.title }}">
+    <div style="display:flex; gap:1rem; margin-top:0.75rem;">
+      <div style="flex:1;">
+        <label for="doc-content">Treść (Markdown)</label>
+        <textarea id="doc-content" name="content" style="min-height:320px;"
+                  @input="preview = marked.parse($event.target.value)">{{ doc.content }}</textarea>
+      </div>
+      <div style="flex:1;">
+        <label>Podgląd na żywo</label>
+        <div class="card" style="min-height:320px; overflow:auto;" x-html="preview"></div>
+      </div>
+    </div>
+    <div style="margin-top:0.75rem; display:flex; gap:0.5rem;">
+      <button type="submit" class="btn btn-primary">Zapisz</button>
+      <a class="btn btn-ghost" href="/documents/{{ doc.id }}">Podgląd</a>
+      <a class="btn btn-ghost" href="/documents">Lista</a>
+    </div>
+  </form>
+</div>

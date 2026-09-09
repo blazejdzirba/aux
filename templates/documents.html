@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Dokumenty — AUX{% endblock %}
+{% block content %}
+<script src="https://unpkg.com/marked/marked.min.js"></script>
+<h1>Dokumenty</h1>
+
+<form method="post" action="/documents" style="margin-bottom:1rem;">
+  <button type="submit" class="btn btn-primary">+ Nowy dokument</button>
+</form>
+
+<div style="display:flex; gap:1.5rem; align-items:flex-start;">
+  <div style="width:300px; flex-shrink:0;" id="doc-list">
+    {% for d in docs %}
+      {% include "partials/document_item.html" %}
+    {% else %}
+      <p class="muted">Brak dokumentów.</p>
+    {% endfor %}
+  </div>
+  <div style="flex:1;" id="editor-area">
+    {% if editing is defined and editing and doc %}
+      {% include "partials/document_editor.html" %}
+    {% elif doc is defined and doc %}
+      <div class="card">
+        <h2>{{ doc.title }}</h2>
+        <div class="muted" style="margin-bottom:0.75rem;">{{ doc.updated_at }}</div>
+        <div>{{ rendered | safe }}</div>
+        <div style="margin-top:1rem;">
+          <a class="btn" href="/documents/{{ doc.id }}/edit">Edytuj</a>
+        </div>
+      </div>
+    {% else %}
+      <div class="card muted">Wybierz dokument z listy albo utwórz nowy.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
