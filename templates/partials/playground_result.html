@@ -1,0 +1,12 @@
+<div class="card">
+  {% if result.status == 'ok' %}
+  <div style="margin-bottom:0.5rem;">
+    <span class="chip status-ok">ok</span>
+    <span class="chip">{{ result.latency_ms }} ms</span>
+  </div>
+  <pre style="white-space:pre-wrap; margin:0;">{{ result.text }}</pre>
+  {% else %}
+  <div><span class="chip status-error">błąd</span></div>
+  <pre class="status-error" style="white-space:pre-wrap; margin:0.5rem 0 0;">{{ result.error }}</pre>
+  {% endif %}
+</div>

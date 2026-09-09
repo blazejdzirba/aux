@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Playground — AUX{% endblock %}
+{% block content %}
+<h1>Playground</h1>
+
+<div x-data="{ tab: 'playground' }">
+  <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+    <button class="btn" :class="tab === 'playground' ? 'btn-primary' : 'btn-ghost'" @click="tab = 'playground'">Playground</button>
+    <button class="btn" :class="tab === 'optimizer' ? 'btn-primary' : 'btn-ghost'" @click="tab = 'optimizer'">Optymalizator</button>
+  </div>
+
+  <div x-show="tab === 'playground'" class="card">
+    <form hx-post="/playground/run" hx-target="#playground-result" hx-swap="innerHTML">
+      <label for="pg-model">Model</label>
+      <select id="pg-model" name="model_id" required>
+        {% for m in models %}
+        <option value="{{ m.id }}">{{ m.display_name or m.model_id }}</option>
+        {% else %}
+        <option value="" disabled selected>Brak modeli — dodaj je w zakładce Modele</option>
+        {% endfor %}
+      </select>
+      <label for="pg-prompt" style="margin-top:0.75rem;">Prompt</label>
+      <textarea id="pg-prompt" name="prompt" required placeholder="Wpisz prompt do wykonania..."></textarea>
+      <div style="margin-top:0.75rem;">
+        <button type="submit" class="btn btn-primary">Uruchom</button>
+      </div>
+    </form>
+    <div id="playground-result" style="margin-top:1rem;"></div>
+  </div>
+
+  <div x-show="tab === 'optimizer'" style="display:none;" class="card">
+    <form hx-post="/prompt-optimizer/optimize" hx-target="#optimizer-result" hx-swap="innerHTML">
+      <label for="opt-prompt">Prompt do optymalizacji</label>
+      <textarea id="opt-prompt" name="prompt" required placeholder="Wklej prompt, który mam ulepszyć..."></textarea>
+      <label for="opt-mode" style="margin-top:0.75rem;">Tryb</label>
+      <select id="opt-mode" name="mode">
+        <option value="standard">Standard</option>
+        <option value="mega">Mega (pytania doprecyzowujące)</option>
+        <option value="systemowy">Systemowy (tworzy prompt systemowy)</option>
+      </select>
+      <div style="margin-top:0.75rem;">
+        <button type="submit" class="btn btn-primary">Optymalizuj</button>
+      </div>
+    </form>
+    <div id="optimizer-result" style="margin-top:1rem;"></div>
+  </div>
+</div>
+{% endblock %}

@@ -14,6 +14,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 from routers.models_router import router as models_router
 app.include_router(models_router)
 
+from routers.playground_router import router as playground_router
+app.include_router(playground_router)
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
