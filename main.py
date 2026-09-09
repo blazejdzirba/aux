@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from database import init_db
 
@@ -22,6 +23,10 @@ app.include_router(documents_router)
 
 from routers.settings_router import router as settings_router
 app.include_router(settings_router)
+
+@app.get("/")
+async def root():
+    return RedirectResponse("/models", status_code=307)
 
 @app.get("/health")
 async def health():
