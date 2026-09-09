@@ -1,0 +1,31 @@
+<div class="card" style="overflow:auto;">
+  <span class="subtle" style="float:right;">{{ keys|length }} kluczy</span>
+  <table>
+    <thead>
+      <tr>
+        <th>Usługa</th><th>ENV VAR</th><th>Klucz</th><th>Tagi</th><th>Dodano</th><th>Ostatnio użyty</th><th>Akcje</th>
+      </tr>
+    </thead>
+    <tbody id="vault-tbody">
+      <tr id="vault-new-row" class="hidden">
+        <td colspan="7">
+          <form hx-post="/vault" hx-target="#vault-table-wrap" hx-swap="innerHTML"
+                style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; padding:0.5rem 0;">
+            <input type="text" name="service_name" placeholder="Usługa (np. openrouter)" required style="width:160px;">
+            <input type="text" name="env_var" placeholder="ENV VAR (np. OPENROUTER_API_KEY)" required style="width:220px;">
+            <input type="text" name="api_key" placeholder="Wartość klucza" required style="width:260px;" autocomplete="off">
+            <input type="text" name="tags" placeholder="tagi, po, przecinku" style="width:160px;">
+            <label class="checkbox-label"><input type="checkbox" name="is_primary" value="1"> główny</label>
+            <button type="submit" class="btn btn-primary">Zapisz</button>
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('vault-new-row').classList.add('hidden')">Anuluj</button>
+          </form>
+        </td>
+      </tr>
+      {% for k in keys %}
+        {% include "partials/vault_row.html" %}
+      {% else %}
+        <tr><td colspan="7" class="muted">Brak zapisanych kluczy.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

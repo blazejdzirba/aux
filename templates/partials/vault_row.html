@@ -1,0 +1,35 @@
+<tr id="vault-row-{{ k.id }}" x-data="{ show: false, editing: false }">
+  <td x-show="!editing">
+    {{ k.service_name }}
+    {% if k.is_primary %}<span class="chip" title="Klucz główny dla tej usługi">główny</span>{% endif %}
+  </td>
+  <td x-show="!editing" class="mono">{{ k.env_var }}</td>
+  <td x-show="!editing">
+    <span x-show="!show" class="mono">{{ k.api_key[:4] }}{{ '•' * 8 }}{{ k.api_key[-4:] if k.api_key|length > 4 else '' }}</span>
+    <span x-show="show" x-cloak class="mono">{{ k.api_key }}</span>
+  </td>
+  <td x-show="!editing" class="subtle">{{ k.tags or "—" }}</td>
+  <td x-show="!editing" class="subtle">{{ k.created_at[:10] }}</td>
+  <td x-show="!editing" class="subtle">{{ k.last_used_at[:16].replace("T", " ") if k.last_used_at else "Nigdy" }}</td>
+  <td x-show="!editing" class="row-actions" style="white-space:nowrap;">
+    <button type="button" class="icon-btn" title="Pokaż/skryj" @click="show = !show" x-text="show ? '🙈' : '👁'"></button>
+    <button type="button" class="icon-btn" title="Kopiuj" @click="navigator.clipboard.writeText('{{ k.api_key }}')">📋</button>
+    <button type="button" class="icon-btn" title="Edytuj" @click="editing = true">✏️</button>
+    <button type="button" class="icon-btn danger" title="Usuń"
+            hx-delete="/vault/{{ k.id }}" hx-target="#vault-row-{{ k.id }}" hx-swap="outerHTML"
+            hx-confirm="Usunąć klucz „{{ k.service_name }}”?">🗑</button>
+  </td>
+
+  <td x-show="editing" x-cloak colspan="7">
+    <form hx-put="/vault/{{ k.id }}" hx-target="#vault-row-{{ k.id }}" hx-swap="outerHTML"
+          style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+      <input type="text" name="service_name" value="{{ k.service_name }}" style="width:140px;" required>
+      <input type="text" name="env_var" value="{{ k.env_var }}" style="width:200px;" required>
+      <input type="text" name="api_key" placeholder="(pozostaw puste, aby nie zmieniać)" style="width:240px;" autocomplete="off">
+      <input type="text" name="tags" value="{{ k.tags or '' }}" style="width:140px;">
+      <label class="checkbox-label"><input type="checkbox" name="is_primary" value="1" {% if k.is_primary %}checked{% endif %}> główny</label>
+      <button type="submit" class="btn btn-primary">Zapisz</button>
+      <button type="button" class="btn btn-ghost" @click="editing = false">Anuluj</button>
+    </form>
+  </td>
+</tr>

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Vault — AUX{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
+  <div>
+    <h1 style="margin:0;">🔐 Vault — Klucze API</h1>
+    <p class="muted" style="margin:0.25rem 0 0;">
+      Bezpieczne przechowywanie kluczy i tokenów dostępu (bez szyfrowania — narzędzie wewnętrzne).
+    </p>
+  </div>
+  <div style="display:flex; gap:0.5rem;">
+    <a class="btn btn-ghost" href="/vault/export">⬇ Eksportuj .env</a>
+    <button type="button" class="btn btn-primary" onclick="document.getElementById('vault-new-row').classList.toggle('hidden')">
+      + Dodaj klucz
+    </button>
+  </div>
+</div>
+
+<input type="search" name="q" placeholder="Szukaj po nazwie serwisu, ENV var, tagach..." value="{{ query }}"
+       style="max-width:420px; margin-bottom:1rem;"
+       hx-get="/vault/table" hx-trigger="keyup changed delay:300ms" hx-target="#vault-table-wrap" hx-swap="innerHTML">
+
+<div id="vault-table-wrap">
+  {% include "partials/vault_table.html" %}
+</div>
+{% endblock %}
