@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}AUX{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="nav-brand" style="margin-bottom:1.5rem;">
+        <span class="dot">●</span> AUX
+      </div>
+      <nav>
+        <a class="nav-item {% if active_page == 'models' %}active{% endif %}" href="/models">Modele</a>
+        <a class="nav-item {% if active_page == 'playground' %}active{% endif %}" href="/playground">Playground</a>
+        <a class="nav-item {% if active_page == 'documents' %}active{% endif %}" href="/documents">Dokumenty</a>
+        <a class="nav-item {% if active_page == 'settings' %}active{% endif %}" href="/settings">Ustawienia</a>
+      </nav>
+    </aside>
+    <main class="main-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

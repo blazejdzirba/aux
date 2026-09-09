@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from database import init_db
 
 @asynccontextmanager
@@ -8,6 +9,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="AUX", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/health")
 async def health():
