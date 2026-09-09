@@ -4,23 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
-  <title>{% block title %}AUX{% endblock %}</title>
+  <title>{% block title %}Vibe Center{% endblock %}</title>
   <link rel="stylesheet" href="/static/app.css?v=3">
+  <link rel="stylesheet" href="/static/theme.css?v=1">
+  <link rel="stylesheet" href="/static/spinner.css?v=1">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body>
   <div class="app-layout">
     <aside class="sidebar">
-      <div class="nav-brand" style="margin-bottom:1.5rem;">
-        <span class="dot">●</span> AUX
+      <div class="nav-brand" style="margin-bottom:1.25rem;">
+        <span class="dot">●</span> Vibe Center
       </div>
+
+      <div class="nav-section-title">Baza wiedzy</div>
       <nav>
-        <a class="nav-item {% if active_page == 'models' %}active{% endif %}" href="/models">Modele</a>
-        <a class="nav-item {% if active_page == 'playground' %}active{% endif %}" href="/playground">Playground</a>
-        <a class="nav-item {% if active_page == 'documents' %}active{% endif %}" href="/documents">Dokumenty</a>
-        <a class="nav-item {% if active_page == 'vault' %}active{% endif %}" href="/vault">Vault</a>
-        <a class="nav-item {% if active_page == 'settings' %}active{% endif %}" href="/settings">Ustawienia</a>
+        <a class="nav-item {% if active_page == 'prompts' %}active{% endif %}" href="/prompts">📝 Prompty</a>
+        <a class="nav-item {% if active_page == 'documents' %}active{% endif %}" href="/documents">📄 Dokumenty</a>
+      </nav>
+
+      <div class="nav-section-title">Zasoby</div>
+      <nav>
+        <a class="nav-item {% if active_page == 'vault' %}active{% endif %}" href="/vault">🔑 Klucze API</a>
+        <a class="nav-item {% if active_page == 'resources' %}active{% endif %}" href="/resources">🧰 Zasoby</a>
+        <a class="nav-item {% if active_page == 'models' %}active{% endif %}" href="/models">🤖 Modele</a>
+        <a class="nav-item {% if active_page == 'playground' %}active{% endif %}" href="/playground">▶️ Playground</a>
+        <a class="nav-item {% if active_page == 'optimizer' %}active{% endif %}" href="/prompt-optimizer">✨ Optymalizator Promptów</a>
+      </nav>
+
+      <div class="nav-section-title">Praca</div>
+      <nav>
+        <a class="nav-item {% if active_page == 'settings' %}active{% endif %}" href="/settings">⚙️ Ustawienia</a>
       </nav>
     </aside>
     <main class="main-content">

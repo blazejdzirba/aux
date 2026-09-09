@@ -28,4 +28,26 @@
     Klucz trafia do config.json (lokalnie, poza repo) i jest używany przez serwisy do testowania modeli i optymalizatora.
   </p>
 </div>
+
+<div class="card" style="max-width:560px; margin-top:1rem;">
+  <h2>Model optymalizatora promptów</h2>
+  <p class="muted" style="margin-top:0;">
+    Model używany przez Optymalizator Promptów (standard / mega / systemowy).
+    Jeśli nie wybierzesz, użyty zostanie domyślny model zapasowy.
+  </p>
+  <form method="post" action="/settings/optimizer-model">
+    <label for="optimizer-model">Model</label>
+    <select id="optimizer-model" name="model_id">
+      <option value="">— użyj domyślnego —</option>
+      {% for m in models %}
+      <option value="{{ m.model_id }}" {% if m.model_id == optimizer_model_id %}selected{% endif %}>
+        {{ m.display_name or m.model_id }}
+      </option>
+      {% endfor %}
+    </select>
+    <div style="margin-top:0.75rem;">
+      <button type="submit" class="btn btn-primary">Zapisz model</button>
+    </div>
+  </form>
+</div>
 {% endblock %}

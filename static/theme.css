@@ -1,0 +1,107 @@
+/* ============================================================
+   AUX / Vibe Center — motyw "czerń-złoto"
+   Ładowany PO app.css — nadpisuje tylko zmienne i wybrane detale,
+   żeby nie trzeba było przepisywać całego app.css.
+   Paleta inspirowana rental-dvb.pages.dev (czerń + bursztynowy akcent).
+   ============================================================ */
+
+:root {
+  /* tło i powierzchnie */
+  --color-bg: #050403;
+  --color-bg-soft: #0d0a06;
+  --color-bg-elevated: #13100a;
+  --color-bg-hover: #1c160d;
+
+  /* tekst */
+  --color-fg: #f3ead9;
+  --color-fg-muted: #b7a781;
+  --color-fg-subtle: #7d7156;
+
+  /* złoty akcent (zamiast starego --color-accent: #c4a574) */
+  --color-accent: #d4af37;
+  --color-accent-hover: #e8c862;
+  --color-accent-soft: rgba(212, 175, 55, 0.14);
+
+  /* obramówki ze złotym odcieniem zamiast neutralnie szarych */
+  --color-border: #2a2013;
+  --color-border-strong: #4a3a1e;
+
+  --color-ok: #9fcf8f;
+  --color-danger: #d17a6a;
+}
+
+/* Alpine x-cloak — chroni przed mignięciem zakładek przed startem Alpine */
+[x-cloak] { display: none !important; }
+
+/* Gradient tła całej aplikacji: od czerni w rogach do ciemnego złota na środku */
+html, body {
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(1200px 700px at 15% -10%, rgba(212, 175, 55, 0.08), transparent 60%),
+    radial-gradient(900px 600px at 100% 10%, rgba(212, 175, 55, 0.05), transparent 55%),
+    linear-gradient(160deg, #000000 0%, #0c0904 45%, #000000 100%);
+  background-attachment: fixed;
+}
+
+/* Sidebar — lekko przezroczysty, ze złotą krawędzią po prawej */
+.sidebar {
+  background: linear-gradient(180deg, rgba(20, 16, 9, 0.9), rgba(5, 4, 3, 0.95));
+  border-right: 1px solid var(--color-border-strong);
+  backdrop-filter: blur(6px);
+}
+
+.nav-brand .dot { color: var(--color-accent); }
+
+.nav-item.active {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border-left: 2px solid var(--color-accent);
+  padding-left: calc(0.75rem - 2px);
+}
+
+/* Nagłówki sekcji sidebaru (BAZA WIEDZY / ZASOBY / PRACA) */
+.nav-section-title {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-fg-subtle);
+  margin: 1.1rem 0 0.35rem 0.75rem;
+}
+
+/* Karty ze złotą, bardzo cienką obwódką + delikatny cień na hover */
+.card {
+  background: linear-gradient(180deg, rgba(19, 16, 10, 0.9), rgba(10, 8, 5, 0.9));
+  border: 1px solid var(--color-border-strong);
+}
+.card:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.15), 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Przyciski */
+.btn-primary {
+  background: linear-gradient(180deg, var(--color-accent), #b8901f);
+  border-color: #b8901f;
+  color: #14100a;
+  font-weight: 600;
+}
+.btn-primary:hover { background: linear-gradient(180deg, var(--color-accent-hover), var(--color-accent)); }
+
+.btn-accent { border-color: var(--color-accent); color: var(--color-accent); }
+.btn-accent:hover { background: var(--color-accent-soft); }
+
+/* Chipy ze złotym obramowaniem */
+.chip { border-color: var(--color-border-strong); }
+.chip.status-ok { color: var(--color-ok); border-color: var(--color-ok); }
+
+/* Zakładki (tabs) — podkreślenie w kolorze złota */
+.tab-btn.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+
+/* Fokus na inputach — złota obwódka */
+input:focus, textarea:focus, select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-soft);
+}

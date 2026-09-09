@@ -69,6 +69,44 @@ def init_db() -> None:
         model_id TEXT PRIMARY KEY,
         ignored_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS saved_prompts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        source TEXT DEFAULT 'optimizer',   -- 'optimizer' | 'manual'
+        mode TEXT DEFAULT '',              -- standard / mega / systemowy
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS resource_links (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        url TEXT NOT NULL,
+        category TEXT DEFAULT '',
+        note TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS resource_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS resource_tools (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        url TEXT DEFAULT '',
+        description TEXT DEFAULT '',
+        category TEXT DEFAULT '',
+        difficulty TEXT DEFAULT '',
+        license TEXT DEFAULT '',
+        agent_friendly INTEGER DEFAULT 0,
+        is_favorite INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now'))
+    );
     """)
     # Migracje kolumn dodanych po pierwszym utworzeniu bazy
     cols = [r["name"] for r in conn.execute("PRAGMA table_info(ai_models)")]

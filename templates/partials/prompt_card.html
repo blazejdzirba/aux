@@ -1,0 +1,17 @@
+<div class="card" id="prompt-{{ p.id }}" style="height:220px; display:flex; flex-direction:column;">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <strong class="truncate" style="max-width:80%;">{{ p.title }}</strong>
+    <button class="icon-btn danger" title="Usuń"
+            hx-delete="/prompts/{{ p.id }}" hx-confirm="Usunąć prompt?"
+            hx-target="#prompt-{{ p.id }}" hx-swap="outerHTML">🗑</button>
+  </div>
+  <div style="margin:0.3rem 0;">
+    {% if p.mode %}<span class="chip">{{ p.mode }}</span>{% endif %}
+    <span class="subtle" style="font-size:0.75rem;">{{ p.created_at[:10] }}</span>
+  </div>
+  <pre style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:pre-wrap;
+              -webkit-line-clamp:6; display:-webkit-box; -webkit-box-orient:vertical;
+              margin:0; font-size:0.82rem; color:var(--color-fg-muted);">{{ p.content }}</pre>
+  <button class="btn btn-ghost" style="margin-top:0.5rem; align-self:flex-start;"
+          onclick="navigator.clipboard.writeText({{ p.content|tojson }})">📋 Kopiuj</button>
+</div>

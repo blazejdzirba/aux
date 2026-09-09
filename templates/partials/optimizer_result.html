@@ -3,7 +3,18 @@
   <div><span class="chip status-error">błąd</span></div>
   <pre class="status-error" style="white-space:pre-wrap; margin:0.5rem 0 0;">{{ error }}</pre>
   {% elif result is defined and result %}
-  <div style="margin-bottom:0.5rem;"><span class="chip">wynik optymalizacji</span></div>
+  <div style="margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
+    <span class="chip">wynik optymalizacji</span>
+    {% if just_saved is defined and just_saved %}
+      <span class="chip status-ok">Zapisano w Promptach ✓</span>
+    {% else %}
+      <form hx-post="/prompts/save" hx-target="this" hx-swap="outerHTML" style="margin:0;">
+        <input type="hidden" name="content" value="{{ result }}">
+        <input type="hidden" name="title" value="Prompt {{ (result[:40] ~ '…') }}">
+        <button type="submit" class="btn btn-accent">💾 Zapisz prompt</button>
+      </form>
+    {% endif %}
+  </div>
   <pre style="white-space:pre-wrap; margin:0;">{{ result }}</pre>
   {% endif %}
 </div>

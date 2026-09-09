@@ -39,6 +39,15 @@ def set_omniroute_api_key(key: str | None) -> None:
         config["omniroute_api_key"] = ""
     save_config(config)
 
+
+def get_optimizer_model_id() -> str:
+    return load_config().get("optimizer_model_id", "") or ""
+
+def set_optimizer_model_id(model_id: str) -> None:
+    config = load_config()
+    config["optimizer_model_id"] = model_id.strip()
+    save_config(config)
+
 def get_db_path() -> Path:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     return DB_PATH

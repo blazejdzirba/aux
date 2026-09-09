@@ -9,9 +9,13 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 @router.get("/playground", response_class=HTMLResponse)
-async def playground_view(request: Request):
+async def playground_view(request: Request, tab: str = "playground"):
     models = list_ai_models()
-    return templates.TemplateResponse(request, "playground.html", {"models": models, "active_page": "playground"})
+    return templates.TemplateResponse(request, "playground.html", {"models": models, "active_page": "playground", "tab": tab})
+
+@router.get("/prompt-optimizer", response_class=HTMLResponse)
+async def optimizer_view(request: Request):
+    return await playground_view(request, tab="optimizer")
 
 @router.post("/playground/run", response_class=HTMLResponse)
 async def playground_run(request: Request, model_id: int = Form(...), prompt: str = Form(...)):

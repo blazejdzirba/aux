@@ -21,8 +21,12 @@
   </td>
   <td class="subtle" style="white-space:nowrap;">🕐 {{ m.last_checked_at[11:16] if m.last_checked_at else '—' }}</td>
   <td class="row-actions" style="white-space:nowrap;">
-    <button type="button" class="icon-btn" title="Testuj ponownie"
-            hx-post="/models/{{ m.id }}/test" hx-target="#model-{{ m.id }}" hx-swap="outerHTML">⚡</button>
+    <button type="button" class="icon-btn" id="test-btn-{{ m.id }}" title="Testuj ponownie"
+            hx-post="/models/{{ m.id }}/test" hx-target="#model-{{ m.id }}" hx-swap="outerHTML"
+            hx-indicator="#spinner-{{ m.id }}">
+      <span id="spinner-{{ m.id }}" class="spinner htmx-indicator"></span>
+      <span class="htmx-indicator-hide">⚡</span>
+    </button>
     <button type="button" class="icon-btn" title="Notatki / tagi"
             hx-get="/models/{{ m.id }}/info" hx-target="#model-info-modal" hx-swap="innerHTML">ℹ️</button>
     <button type="button" class="icon-btn danger" title="Usuń z użycia"

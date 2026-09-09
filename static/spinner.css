@@ -1,0 +1,19 @@
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border-strong);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* htmx: pokazuj spinner tylko podczas trwania requestu */
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator { display: inline-block; }
+.htmx-request.htmx-indicator { display: inline-block; }
+
+/* „⚡" chowa się podczas requestu, żeby ustąpić miejsca spinnerowi */
+.htmx-request .htmx-indicator-hide { display: none; }

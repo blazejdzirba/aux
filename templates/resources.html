@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Zasoby — Vibe Center{% endblock %}
+{% block content %}
+<h1>🧰 Zasoby</h1>
+<p class="muted" style="margin-top:-0.5rem;">Linki, notatki i narzędzia w jednym miejscu.</p>
+
+<div x-data="{ tab: '{{ active_tab }}' }">
+  <div class="tabs">
+    <button class="tab-btn" :class="tab === 'links' ? 'active' : ''" @click="tab = 'links'">🔗 Linki</button>
+    <button class="tab-btn" :class="tab === 'notes' ? 'active' : ''" @click="tab = 'notes'">🗒️ Notatki</button>
+    <button class="tab-btn" :class="tab === 'tools' ? 'active' : ''" @click="tab = 'tools'">🛠️ Narzędzia</button>
+  </div>
+
+  <!-- LINKI -->
+  <div x-show="tab === 'links'" x-cloak>
+    <form class="card" style="margin-bottom:1rem;" hx-post="/resources/links" hx-target="#links-list" hx-swap="innerHTML">
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <input type="text" name="title" placeholder="Tytuł" required style="flex:1; min-width:180px;">
+        <input type="text" name="url" placeholder="https://..." required style="flex:2; min-width:220px;">
+        <input type="text" name="category" placeholder="Kategoria" style="flex:1; min-width:140px;">
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-top:0.6rem;">+ Dodaj link</button>
+    </form>
+    <div id="links-list">
+      {% include "partials/resource_links_list.html" %}
+    </div>
+  </div>
+
+  <!-- NOTATKI -->
+  <div x-show="tab === 'notes'" x-cloak style="display:none;">
+    <form class="card" style="margin-bottom:1rem;" hx-post="/resources/notes" hx-target="#notes-list" hx-swap="innerHTML">
+      <input type="text" name="title" placeholder="Tytuł notatki" required style="margin-bottom:0.5rem;">
+      <textarea name="content" placeholder="Treść..."></textarea>
+      <button type="submit" class="btn btn-primary" style="margin-top:0.6rem;">+ Dodaj notatkę</button>
+    </form>
+    <div id="notes-list">
+      {% include "partials/resource_notes_list.html" %}
+    </div>
+  </div>
+
+  <!-- NARZĘDZIA -->
+  <div x-show="tab === 'tools'" x-cloak style="display:none;">
+    <form class="card" style="margin-bottom:1rem;" hx-post="/resources/tools" hx-target="#tools-list" hx-swap="innerHTML">
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <input type="text" name="name" placeholder="Nazwa narzędzia" required style="flex:1; min-width:160px;">
+        <input type="text" name="url" placeholder="Docs URL" style="flex:1; min-width:160px;">
+        <input type="text" name="category" placeholder="Kategoria" style="flex:1; min-width:140px;">
+      </div>
+      <textarea name="description" placeholder="Krótki opis" style="margin-top:0.5rem; min-height:60px;"></textarea>
+      <button type="submit" class="btn btn-primary" style="margin-top:0.6rem;">+ Dodaj narzędzie</button>
+    </form>
+    <div id="tools-list">
+      {% include "partials/resource_tools_list.html" %}
+    </div>
+  </div>
+</div>
+{% endblock %}

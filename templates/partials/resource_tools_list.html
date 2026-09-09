@@ -1,0 +1,18 @@
+<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:0.75rem;">
+  {% for t in tools %}
+  <div class="card" id="tool-{{ t.id }}">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <strong>{{ t.name }}</strong>
+      <button class="icon-btn danger" title="Usuń"
+              hx-delete="/resources/tools/{{ t.id }}" hx-confirm="Usunąć narzędzie?"
+              hx-target="#tool-{{ t.id }}" hx-swap="outerHTML">🗑</button>
+    </div>
+    {% if t.category %}<span class="chip">{{ t.category }}</span>{% endif %}
+    {% if t.difficulty %}<span class="chip">{{ t.difficulty }}</span>{% endif %}
+    <p class="muted" style="margin:0.4rem 0;">{{ t.description }}</p>
+    {% if t.url %}<a class="btn btn-ghost" href="{{ t.url }}" target="_blank">Docs</a>{% endif %}
+  </div>
+  {% else %}
+  <p class="muted">Brak narzędzi.</p>
+  {% endfor %}
+</div>

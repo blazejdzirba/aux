@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from models import (
     list_ai_models, get_model, delete_model, upsert_model, used_count,
     group_models_by_prefix, update_model_notes, get_provider_by_slug,
+    update_model_status,
 )
 from catalog import list_used_model_ids, list_ignored_model_ids, ignore_models
 from services.model_monitor import check_single_model
@@ -87,15 +88,18 @@ async def catalog_test(
     do_add = auto_add == "1"
     ephemeral: dict[str, dict] = {}
     for model_id in selected:
-        if do_add and provider_row:
+        try:
+            result = run_prompt(model_id, "Ping")
+        except Exception as e:
+            result = {"status": "error", "error": str(e), "latency_ms": None}
+        ephemeral[model_id] = result
+
+        # Auto-dodaj TYLKO gdy test przeszedł pomyślnie — model, który nie
+        # przeszedł testu, w ogóle nie trafia do "W użyciu" (zostaje bez zmian).
+        if do_add and provider_row and result.get("status") == "ok":
             model = upsert_model(provider_row["id"], model_id)
-            await check_single_model(model["id"])
-        else:
-            try:
-                result = run_prompt(model_id, "Ping")
-            except Exception as e:
-                result = {"status": "error", "error": str(e), "latency_ms": None}
-            ephemeral[model_id] = result
+            update_model_status(model["id"], "ok", result.get("latency_ms"), "")
+
     ctx = _catalog_context(query, provider, free, auto_add, ephemeral)
     return templates.TemplateResponse(request, "partials/catalog_results.html", ctx)
 

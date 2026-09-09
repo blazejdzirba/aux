@@ -3,7 +3,7 @@
 {% block content %}
 <h1>Playground</h1>
 
-<div x-data="{ tab: 'playground' }">
+<div x-data="{ tab: '{{ tab|default("playground") }}' }">
   <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
     <button class="btn" :class="tab === 'playground' ? 'btn-primary' : 'btn-ghost'" @click="tab = 'playground'">Playground</button>
     <button class="btn" :class="tab === 'optimizer' ? 'btn-primary' : 'btn-ghost'" @click="tab = 'optimizer'">Optymalizator</button>

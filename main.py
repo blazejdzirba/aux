@@ -27,6 +27,12 @@ app.include_router(settings_router)
 from routers.vault_router import router as vault_router
 app.include_router(vault_router)
 
+from routers.resources_router import router as resources_router
+app.include_router(resources_router)
+
+from routers.prompts_router import router as prompts_router
+app.include_router(prompts_router)
+
 @app.get("/")
 async def root():
     return RedirectResponse("/models", status_code=307)

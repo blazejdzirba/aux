@@ -9,7 +9,7 @@ ai-workspace-app/prompt_optimizer/engine.py). Dostosowane do AUX:
 """
 import requests
 
-from config import get_omniroute_api_key
+from config import get_omniroute_api_key, get_optimizer_model_id
 
 DEFAULT_TIMEOUT = 60
 FALLBACK_MODEL = "auto/best-free"
@@ -92,9 +92,13 @@ def _get_api_key() -> str:
     return key
 
 
+def _resolve_model(explicit: str | None) -> str:
+    return explicit or get_optimizer_model_id() or FALLBACK_MODEL
+
 def _chat(system_prompt: str, user_content: str,
-          model: str = FALLBACK_MODEL, timeout: int = DEFAULT_TIMEOUT,
+          model: str | None = None, timeout: int = DEFAULT_TIMEOUT,
           max_tokens: int = 2048) -> str:
+    model = _resolve_model(model)
     url = BASE_URL.rstrip("/") + CHAT_ENDPOINT
     headers = {"Authorization": f"Bearer {_get_api_key()}", "Content-Type": "application/json"}
     payload = {
