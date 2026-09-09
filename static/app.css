@@ -153,3 +153,76 @@ label { display: block; margin-bottom: 0.3rem; color: var(--color-fg-muted); fon
 }
 .nav-item:hover { background: var(--color-bg-hover); color: var(--color-fg); }
 .nav-item.active { color: var(--color-fg); background: var(--color-bg-soft); }
+
+/* --- AUX v2: rozszerzenia (Modele / Vault) --- */
+
+[x-cloak] { display: none !important; }
+.hidden { display: none !important; }
+
+.mono { font-family: var(--font-mono); font-size: 0.85em; }
+.truncate {
+  display: inline-block;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Zakładki */
+.tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border); }
+.tab-btn {
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  color: var(--color-fg-muted); padding: 0.6rem 1rem; font-size: 0.92rem;
+  font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 0.4rem;
+}
+.tab-btn:hover { color: var(--color-fg); }
+.tab-btn.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+
+/* Toolbar filtrów */
+.toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.toolbar input[type="search"], .toolbar select { width: auto; min-width: 160px; }
+.toolbar-spacer { flex: 1; }
+.checkbox-label {
+  display: flex; align-items: center; gap: 0.35rem;
+  color: var(--color-fg-muted); font-size: 0.85rem; white-space: nowrap; margin-bottom: 0;
+}
+.checkbox-label input[type="checkbox"] { width: auto; }
+
+.btn-danger { background: transparent; border-color: var(--color-danger); color: var(--color-danger); }
+.btn-danger:hover { background: rgba(201, 111, 111, 0.12); }
+
+/* Przyciski ikonowe w wierszach tabel */
+.icon-btn {
+  background: transparent; border: none; color: var(--color-fg-muted);
+  cursor: pointer; font-size: 0.95rem; padding: 0.15rem 0.35rem; border-radius: var(--radius-sm);
+}
+.icon-btn:hover { background: var(--color-bg-hover); color: var(--color-fg); }
+.icon-btn.danger:hover { color: var(--color-danger); }
+.row-actions { display: flex; gap: 0.15rem; }
+
+/* Grupy providerów (katalog / w użyciu) */
+.model-group {
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  margin-bottom: 0.6rem; background: var(--color-bg-elevated); overflow: hidden;
+}
+.model-group summary {
+  list-style: none; cursor: pointer; padding: 0.55rem 0.9rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  color: var(--color-fg); font-weight: 500; user-select: none;
+}
+.model-group summary::-webkit-details-marker { display: none; }
+.model-group .group-name { color: var(--color-accent); }
+.model-group table { border-top: 1px solid var(--color-border); }
+.model-group td { border-bottom: 1px solid var(--color-border); }
+.model-group tr:last-child td { border-bottom: none; }
+
+/* Prosty modal (notatki modelu) */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal-card { width: 420px; max-width: 92vw; }
+.meta-list { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.75rem; font-size: 0.85rem; }
+.meta-list dt { color: var(--color-fg-subtle); }
+.meta-list dd { margin: 0; color: var(--color-fg-muted); }

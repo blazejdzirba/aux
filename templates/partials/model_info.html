@@ -1,0 +1,25 @@
+<div class="modal-backdrop" onclick="if (event.target === this) this.remove()">
+  <div class="card modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+      <strong class="mono">{{ m.model_id }}</strong>
+      <button type="button" class="icon-btn" onclick="this.closest('.modal-backdrop').remove()">✕</button>
+    </div>
+    {% if saved is defined and saved %}
+      <span class="chip status-ok" style="margin-bottom:0.5rem;">Zapisano ✓</span>
+    {% endif %}
+    <form hx-post="/models/{{ m.id }}/notes" hx-target="#model-info-modal" hx-swap="innerHTML">
+      <label for="notes-{{ m.id }}">Notatki</label>
+      <textarea id="notes-{{ m.id }}" name="notes" style="min-height:100px;">{{ m.notes or "" }}</textarea>
+      <label for="tags-{{ m.id }}" style="margin-top:0.5rem;">Tagi (po przecinku)</label>
+      <input id="tags-{{ m.id }}" type="text" name="tags" value="{{ tags_str }}">
+      <div style="margin-top:0.75rem; display:flex; gap:0.5rem;">
+        <button type="submit" class="btn btn-primary">Zapisz</button>
+      </div>
+    </form>
+    <dl class="meta-list" style="margin-top:0.75rem;">
+      <dt>Kontekst</dt><dd>{{ "{:,}".format(m.context_length).replace(",", " ") if m.context_length else "—" }} tok.</dd>
+      <dt>Ostatni błąd</dt><dd class="subtle">{{ m.last_error or "—" }}</dd>
+      <dt>Ostatnia weryfikacja</dt><dd class="subtle">{{ m.last_checked_at or "—" }}</dd>
+    </dl>
+  </div>
+</div>

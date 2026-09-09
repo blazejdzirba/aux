@@ -10,7 +10,8 @@ def get_provider_by_slug(slug: str):
     return dict(row) if row else None
 
 # ---------- Models ----------
-def list_ai_models(status: str | None = None, query: str | None = None):
+def list_ai_models(status: str | None = None, query: str | None = None,
+                    free_only: bool = False, sort: str = "name"):
     conn = get_db_connection()
     sql = "SELECT m.*, p.name as provider_name FROM ai_models m JOIN providers p ON p.id = m.provider_id WHERE 1=1"
     params = []
@@ -21,10 +22,31 @@ def list_ai_models(status: str | None = None, query: str | None = None):
         sql += " AND (m.model_id LIKE ? OR m.display_name LIKE ?)"
         like = f"%{query}%"
         params.extend([like, like])
-    sql += " ORDER BY m.display_name, m.model_id"
+    if free_only:
+        sql += " AND m.is_free = 1"
+    order = {
+        "name": "m.model_id",
+        "status": "m.last_status, m.model_id",
+        "latency": "m.last_latency_ms IS NULL, m.last_latency_ms",
+    }.get(sort, "m.model_id")
+    sql += f" ORDER BY {order}"
     rows = conn.execute(sql, params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+def group_models_by_prefix(models: list[dict]) -> dict[str, list[dict]]:
+    """Grupuje modele 'w użyciu' po prefiksie z model_id (np. agentrouter/xyz -> AGENTROUTER)."""
+    groups: dict[str, list[dict]] = {}
+    for m in models:
+        prefix = m["model_id"].split("/", 1)[0].upper() if "/" in m["model_id"] else "INNE"
+        groups.setdefault(prefix, []).append(m)
+    return dict(sorted(groups.items()))
+
+def used_count() -> int:
+    conn = get_db_connection()
+    n = conn.execute("SELECT COUNT(*) c FROM ai_models").fetchone()["c"]
+    conn.close()
+    return n
 
 def get_model(model_id: int):
     conn = get_db_connection()
@@ -32,16 +54,22 @@ def get_model(model_id: int):
     conn.close()
     return dict(row) if row else None
 
-def upsert_model(provider_id: int, model_id: str, display_name: str = "", context_length: int | None = None):
+def upsert_model(provider_id: int, model_id: str, display_name: str = "",
+                  context_length: int | None = None, is_free: bool | None = None):
     conn = get_db_connection()
-    existing = conn.execute("SELECT id FROM ai_models WHERE provider_id = ? AND model_id = ?", (provider_id, model_id)).fetchone()
+    existing = conn.execute("SELECT * FROM ai_models WHERE provider_id = ? AND model_id = ?", (provider_id, model_id)).fetchone()
     if existing:
-        conn.execute("UPDATE ai_models SET display_name = ?, context_length = ?, updated_at = datetime('now') WHERE id = ?",
-                     (display_name or existing["display_name"], context_length, existing["id"]))
+        final_free = existing["is_free"] if is_free is None else (1 if is_free else 0)
+        conn.execute(
+            "UPDATE ai_models SET display_name = ?, context_length = ?, is_free = ?, updated_at = datetime('now') WHERE id = ?",
+            (display_name or existing["display_name"], context_length, final_free, existing["id"]),
+        )
         new_id = existing["id"]
     else:
-        cur = conn.execute("INSERT INTO ai_models (provider_id, model_id, display_name, context_length) VALUES (?, ?, ?, ?)",
-                           (provider_id, model_id, display_name, context_length))
+        cur = conn.execute(
+            "INSERT INTO ai_models (provider_id, model_id, display_name, context_length, is_free) VALUES (?, ?, ?, ?, ?)",
+            (provider_id, model_id, display_name, context_length, 1 if is_free else 0),
+        )
         new_id = cur.lastrowid
     conn.commit()
     conn.close()

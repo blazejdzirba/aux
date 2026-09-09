@@ -20,6 +20,15 @@ def save_config(config: dict) -> None:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
 def get_omniroute_api_key() -> str:
+    # Vault ma priorytet (usługa "omniroute") — jeśli nic tam nie ma, fallback
+    # do starego config.json / strony Ustawienia, żeby nic się nie wysypało.
+    try:
+        from vault import get_primary_key_for_service
+        vault_key = get_primary_key_for_service("omniroute")
+        if vault_key:
+            return vault_key
+    except Exception:
+        pass
     return load_config().get("omniroute_api_key", "")
 
 def set_omniroute_api_key(key: str | None) -> None:

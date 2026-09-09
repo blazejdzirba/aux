@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Modele — AUX{% endblock %}
+{% block content %}
+<h1 style="margin-bottom:0.25rem;">🤖 Modele AI</h1>
+<p class="muted" style="margin-top:0;">Katalog modeli providera, testowanie łączności oraz lista modeli w użyciu</p>
+
+<div x-data="{ tab: 'catalog' }">
+  <div class="tabs">
+    <button type="button" class="tab-btn" :class="tab === 'catalog' ? 'active' : ''"
+            @click="tab = 'catalog'"
+            hx-get="/models/catalog" hx-target="#models-tabpanel" hx-swap="innerHTML">
+      🔬 Testowanie
+    </button>
+    <button type="button" class="tab-btn" :class="tab === 'used' ? 'active' : ''"
+            @click="tab = 'used'"
+            hx-get="/models/used" hx-target="#models-tabpanel" hx-swap="innerHTML">
+      ✅ W użyciu <span class="chip">{{ used_count }}</span>
+    </button>
+  </div>
+  <div id="models-tabpanel" hx-get="/models/catalog" hx-trigger="load" hx-swap="innerHTML">
+    <p class="muted">Wczytywanie…</p>
+  </div>
+</div>
+{% endblock %}
