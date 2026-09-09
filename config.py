@@ -48,6 +48,24 @@ def set_optimizer_model_id(model_id: str) -> None:
     config["optimizer_model_id"] = model_id.strip()
     save_config(config)
 
+DEFAULT_OMNIROUTE_BASE = "https://openrouter.ai/api/v1"
+
+def get_omniroute_base() -> str:
+    """Zwraca root endpointu OmniRoute (OpenAI-compatible), zawsze kończący się na /v1."""
+    raw = (load_config().get("omniroute_base_url", "") or DEFAULT_OMNIROUTE_BASE).strip().rstrip("/")
+    if not raw.endswith("/v1"):
+        raw += "/v1"
+    return raw
+
+def set_omniroute_base(url: str) -> None:
+    config = load_config()
+    raw = (url or "").strip()
+    if not raw:
+        config.pop("omniroute_base_url", None)   # wraca domyślny
+    else:
+        config["omniroute_base_url"] = raw.rstrip("/")
+    save_config(config)
+
 def get_db_path() -> Path:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     return DB_PATH

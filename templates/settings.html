@@ -1,11 +1,31 @@
 {% extends "base.html" %}
-{% block title %}Ustawienia — AUX{% endblock %}
+{% block title %}Ustawienia — Vibe Center{% endblock %}
 {% block content %}
 <h1>Ustawienia</h1>
 
 <div class="card" style="max-width:560px;" x-data="{ show: false }">
   {% if saved %}<p style="margin:0 0 0.75rem;"><span class="chip status-ok">Zapisano ✓</span></p>{% endif %}
 
+  <h2>Endpoint OmniRouter</h2>
+  <p class="muted" style="margin-top:0;">
+    Root endpointu zgodny z OpenAI (końcówka /v1 jest dodawana automatycznie).
+    Modele do list wybierania są zaciągane stąd (GET /v1/models).
+  </p>
+  <form method="post" action="/settings/omniroute-base">
+    <label for="base-url">Endpoint</label>
+    <input id="base-url" type="text" name="base_url" value="{{ omniroute_base }}" placeholder="http://localhost:20128/v1" autocomplete="off">
+    <div style="margin-top:0.75rem;">
+      <button type="submit" class="btn btn-primary">Zapisz endpoint</button>
+    </div>
+  </form>
+  {% if catalog_error %}
+  <p class="status-error" style="margin-top:0.75rem; font-size:0.85rem;">⚠️ Nie udało się pobrać modeli: {{ catalog_error }}</p>
+  {% else %}
+  <p class="subtle" style="font-size:0.78rem; margin-top:0.75rem;">Katalog modeli: pobrano poprawnie.</p>
+  {% endif %}
+</div>
+
+<div class="card" style="max-width:560px; margin-top:1rem;" x-data="{ show: false }">
   <h2>Klucz API OmniRouter</h2>
   {% if has_key %}
   <p class="muted" style="margin-top:0;">Zapisany klucz: <code>{{ masked_key }}</code></p>
@@ -33,7 +53,7 @@
   <h2>Model optymalizatora promptów</h2>
   <p class="muted" style="margin-top:0;">
     Model używany przez Optymalizator Promptów (standard / mega / systemowy).
-    Jeśli nie wybierzesz, użyty zostanie domyślny model zapasowy.
+    Lista pochodzi wprost z endpointu OmniRouter. Jeśli nie wybierzesz, użyty zostanie domyślny model zapasowy.
   </p>
   <form method="post" action="/settings/optimizer-model">
     <label for="optimizer-model">Model</label>
@@ -41,7 +61,7 @@
       <option value="">— użyj domyślnego —</option>
       {% for m in models %}
       <option value="{{ m.model_id }}" {% if m.model_id == optimizer_model_id %}selected{% endif %}>
-        {{ m.display_name or m.model_id }}
+        {{ m.provider_prefix }}/{{ m.model_name }}
       </option>
       {% endfor %}
     </select>

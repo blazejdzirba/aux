@@ -1,8 +1,7 @@
-"""Pobiera i cache'uje katalog modeli providera omniroute (GET /v1/models)."""
+"""Pobiera i cache'uje katalog modeli z endpointu OmniRoute (GET /v1/models)."""
 import time
 import requests
-from config import get_omniroute_api_key
-from models import get_provider_by_slug
+from config import get_omniroute_api_key, get_omniroute_base
 
 _cache: dict = {"items": None, "ts": 0.0}
 TTL_SECONDS = 300
@@ -16,16 +15,17 @@ def _is_free(model_id: str, pricing: dict) -> bool:
     return prompt_price in ("0", "0.0", "0.00") and completion_price in ("0", "0.0", "0.00")
 
 
+def clear_cache() -> None:
+    _cache["items"] = None
+    _cache["ts"] = 0.0
+
+
 def fetch_catalog(force: bool = False) -> list[dict]:
     now = time.time()
     if not force and _cache["items"] is not None and (now - _cache["ts"]) < TTL_SECONDS:
         return _cache["items"]
 
-    provider = get_provider_by_slug("omniroute")
-    if not provider:
-        raise RuntimeError("Provider omniroute nie istnieje w bazie")
-
-    url = provider["base_url"].rstrip("/") + provider["models_endpoint"]
+    url = get_omniroute_base().rstrip("/") + "/models"
     key = get_omniroute_api_key()
     headers = {"Authorization": f"Bearer {key}"} if key else {}
 

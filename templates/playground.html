@@ -1,7 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Playground — AUX{% endblock %}
+{% block title %}Optymalizator Promptów — Vibe Center{% endblock %}
 {% block content %}
-<h1>Playground</h1>
+<h1>✨ Optymalizator Promptów</h1>
+<p class="muted" style="margin-top:-0.5rem;">Ulepszaj prompty, generuj pytania doprecyzowujące lub twórz prompt systemowy.</p>
 
 <div x-data="{ tab: '{{ tab|default("playground") }}' }">
   <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
@@ -11,12 +12,12 @@
 
   <div x-show="tab === 'playground'" class="card">
     <form hx-post="/playground/run" hx-target="#playground-result" hx-swap="innerHTML">
-      <label for="pg-model">Model</label>
+      <label for="pg-model">Model (zaciągnięty z OmniRouter)</label>
       <select id="pg-model" name="model_id" required>
         {% for m in models %}
-        <option value="{{ m.id }}">{{ m.display_name or m.model_id }}</option>
+        <option value="{{ m.model_id }}">{{ m.provider_prefix }}/{{ m.model_name }}{% if m.is_free %} · free{% endif %}</option>
         {% else %}
-        <option value="" disabled selected>Brak modeli — dodaj je w zakładce Modele</option>
+        <option value="" disabled selected>Brak modeli — sprawdź endpoint i klucz w Ustawieniach</option>
         {% endfor %}
       </select>
       <label for="pg-prompt" style="margin-top:0.75rem;">Prompt</label>

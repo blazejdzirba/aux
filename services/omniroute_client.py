@@ -1,7 +1,6 @@
 import time
 import requests
-from config import get_omniroute_api_key
-from models import get_provider_by_slug
+from config import get_omniroute_api_key, get_omniroute_base
 
 def _get_headers():
     key = get_omniroute_api_key()
@@ -10,10 +9,7 @@ def _get_headers():
     return {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
 def run_prompt(model_id: str, prompt: str) -> dict:
-    provider = get_provider_by_slug("omniroute")
-    if not provider:
-        raise RuntimeError("Provider omniroute nie istnieje w bazie")
-    url = provider["base_url"].rstrip("/") + provider["chat_endpoint"]
+    url = get_omniroute_base().rstrip("/") + "/chat/completions"
     headers = _get_headers()
     payload = {
         "model": model_id,
