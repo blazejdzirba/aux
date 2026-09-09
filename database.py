@@ -36,6 +36,7 @@ def init_db() -> None:
         tags TEXT DEFAULT '[]',
         created_at TEXT DEFAULT (datetime('now')),
         updated_at TEXT DEFAULT (datetime('now')),
+        is_hidden INTEGER DEFAULT 0,
         UNIQUE(provider_id, model_id)
     );
     CREATE TABLE IF NOT EXISTS model_status_checks (
@@ -55,6 +56,10 @@ def init_db() -> None:
         updated_at TEXT DEFAULT (datetime('now'))
     );
     """)
+    # Migracja: is_hidden dodane po inauguralnym tworzeniu bazy (ALTER nie ma IF NOT EXISTS)
+    cols = [r["name"] for r in conn.execute("PRAGMA table_info(ai_models)")]
+    if "is_hidden" not in cols:
+        conn.execute("ALTER TABLE ai_models ADD COLUMN is_hidden INTEGER DEFAULT 0")
     # Wstaw domyślnego providera omniroute
     conn.execute("INSERT OR IGNORE INTO providers (name, slug, kind, base_url, chat_endpoint, models_endpoint) VALUES ('OmniRoute', 'omniroute', 'omniroute', 'https://openrouter.ai/api', '/v1/chat/completions', '/v1/models')")
     conn.commit()
