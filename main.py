@@ -11,6 +11,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="AUX", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+from routers.models_router import router as models_router
+app.include_router(models_router)
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}

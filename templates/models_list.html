@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Modele</h1>
+<table class="prose" style="width:100%;">
+  <thead><tr><th>Model</th><th>Status</th><th>Latency</th><th>Akcje</th></tr></thead>
+  <tbody id="models-tbody">
+    {% for m in models %}
+      {% include "partials/model_row.html" %}
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

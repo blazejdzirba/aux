@@ -1,0 +1,11 @@
+<tr id="model-{{ m.id }}">
+  <td>{{ m.model_id }}</td>
+  <td>
+    {% if m.last_status == 'ok' %}🟢{% elif m.last_status == 'error' %}🔴{% else %}⚪{% endif %}
+  </td>
+  <td>{{ m.last_latency_ms }} ms</td>
+  <td>
+    <button class="btn btn-ghost" hx-post="/models/{{ m.id }}/test" hx-target="#model-{{ m.id }}" hx-swap="outerHTML">Test</button>
+    <button class="btn btn-ghost" hx-post="/models/{{ m.id }}/delete" hx-confirm="Usunąć?">Usuń</button>
+  </td>
+</tr>
