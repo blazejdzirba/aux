@@ -20,6 +20,9 @@ app.include_router(playground_router)
 from routers.documents_router import router as documents_router
 app.include_router(documents_router)
 
+from routers.settings_router import router as settings_router
+app.include_router(settings_router)
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}

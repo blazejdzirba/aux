@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Ustawienia — AUX{% endblock %}
+{% block content %}
+<h1>Ustawienia</h1>
+
+<div class="card" style="max-width:560px;" x-data="{ show: false }">
+  {% if saved %}<p style="margin:0 0 0.75rem;"><span class="chip status-ok">Zapisano ✓</span></p>{% endif %}
+
+  <h2>Klucz API OmniRouter</h2>
+  {% if has_key %}
+  <p class="muted" style="margin-top:0;">Zapisany klucz: <code>{{ masked_key }}</code></p>
+  {% else %}
+  <p class="muted" style="margin-top:0;">Klucz nie jest jeszcze ustawiony.</p>
+  {% endif %}
+
+  <form method="post" action="/settings/omniroute-key">
+    <label for="api-key">Nowy klucz</label>
+    <div style="display:flex; gap:0.5rem;">
+      <input id="api-key" :type="show ? 'text' : 'password'" type="password" name="api_key"
+             placeholder="sk-or-v1-..." autocomplete="off">
+      <button type="button" class="btn btn-ghost" @click="show = !show" x-text="show ? 'Ukryj' : 'Pokaż'">Pokaż</button>
+    </div>
+    <div style="margin-top:0.75rem;">
+      <button type="submit" class="btn btn-primary">Zapisz klucz</button>
+    </div>
+  </form>
+  <p class="subtle" style="font-size:0.78rem; margin-top:1rem;">
+    Klucz trafia do config.json (lokalnie, poza repo) i jest używany przez serwisy do testowania modeli i optymalizatora.
+  </p>
+</div>
+{% endblock %}
