@@ -35,8 +35,8 @@ async def save_prompt(request: Request, title: str = Form(...), content: str = F
     conn.commit()
     conn.close()
     return templates.TemplateResponse(
-        request, "partials/optimizer_result.html",
-        {"result": content, "just_saved": True},
+        request, "partials/prompt_saved.html",
+        {},
     )
 
 

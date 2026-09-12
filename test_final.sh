@@ -8,7 +8,7 @@ echo
 curl -s -o /dev/null -w "/static/app.css -> HTTP %{http_code}\n" $B/static/app.css
 
 echo "=== 2. wszystkie strony GET ==="
-for p in / /models /playground /documents /settings; do
+for p in / /models /playground /optimizer /documents /settings; do
   curl -s -o /dev/null -w "$p -> HTTP %{http_code}\n" $B$p
 done
 
@@ -35,7 +35,9 @@ echo "=== 6. flow /settings + playground z kluczem ==="
 curl -s -X POST $B/settings/omniroute-key --data-urlencode "api_key=sk-or-final-test" | grep -o 'Zapisano ✓'
 sqlite3 data/aux.db "INSERT INTO ai_models (provider_id, model_id) VALUES (1, 'test/pg-final');"
 PID=$(sqlite3 data/aux.db "SELECT id FROM ai_models WHERE model_id='test/pg-final';")
-curl -s -X POST $B/playground/run --data-urlencode "model_id=$PID" --data-urlencode "prompt=Hej" | grep -oE 'HTTP 40[0-9]: [^<]{0,40}' | head -1
+curl -s -X POST $B/playground/chat -H "Content-Type: application/json" \
+  -d "{\"model_id\": \"$PID\", \"messages\": [{\"role\": \"user\", \"content\": \"Hej\"}]}" \
+  | grep -oE '"(status|error)": "[^"]{0,60}' | head -2
 
 echo "=== cleanup ==="
 sqlite3 data/aux.db "DELETE FROM ai_models WHERE model_id LIKE 'test/%'; DELETE FROM documents WHERE title LIKE 'Final%';"

@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/empty_state.html" import empty_state %}
+{% from "partials/project_rows.html" import note_row, prompt_row, doc_row %}
+{% block title %}{{ project.title }} — Projekty{% endblock %}
+{% block content %}
+<div class="pj-page" x-data="projectDetail('{{ tab }}')"
+     @pj-note-edit.window="openNoteEdit($event.detail.id, $event.detail.title, $event.detail.content)"
+     @pj-note-delete.window="openNoteDelete($event.detail.id, $event.detail.title)"
+     @pj-unassign.window="openUnassign($event.detail.unAction, $event.detail.unName, $event.detail.unKind)">
+  <a class="btn btn-ghost pj-back" href="/projects">{{ icon('arrow-left') }} Wróć do listy</a>
+  <div class="pj-head">
+    <div>
+      <h1 class="pj-title">{{ project.title }}</h1>
+      <p class="pj-sub muted">{{ project.description or "Brak opisu" }} · {{ icon('clock') }} {{ project.updated_display }}</p>
+    </div>
+  </div>
+
+  <!-- ================= ZAKŁADKI (przełączane lokalnie, płynnie) ================= -->
+  <div class="tabs pj-tabs" role="tablist">
+    <button type="button" role="tab" class="tab-btn" :class="tab === 'notes' && 'active'" @click="tab = 'notes'">{{ icon('pencil') }} Notatki ({{ counts.notes }})</button>
+    <button type="button" role="tab" class="tab-btn" :class="tab === 'prompts' && 'active'" @click="tab = 'prompts'">{{ icon('terminal') }} Prompty ({{ counts.prompts }})</button>
+    <button type="button" role="tab" class="tab-btn" :class="tab === 'documents' && 'active'" @click="tab = 'documents'">{{ icon('file-text') }} Dokumenty ({{ counts.documents }})</button>
+    <button type="button" role="tab" class="tab-btn" :class="tab === 'tree' && 'active'" @click="tab = 'tree'">🌳 Drzewo</button>
+  </div>
+
+  <!-- ================= PANEL: NOTATKI ================= -->
+  <div class="pj-tabpanel" x-show="tab === 'notes'" x-transition.opacity style="display:none;">
+    <div class="pj-tabbar">
+      <p class="pj-tabhint muted">Notatki należą tylko do tego projektu.</p>
+      <button type="button" class="btn btn-primary" @click="addNoteOpen = true">{{ icon('plus') }} Dodaj notatkę</button>
+    </div>
+    {% if notes %}
+    <div class="pj-rows">
+      {% for n in notes %}{{ note_row(n) }}{% endfor %}
+    </div>
+    {% else %}
+    {% call empty_state('pencil', 'Brak notatek', 'Dodaj pierwszą notatkę do tego projektu — np. zarys, ustalenia albo listę TODO.') %}
+      <button type="button" class="btn btn-primary" @click="addNoteOpen = true">{{ icon('plus') }} Dodaj notatkę</button>
+    {% endcall %}
+    {% endif %}
+  </div>
+
+  <!-- ================= PANEL: PROMPTY ================= -->
+  <div class="pj-tabpanel" x-show="tab === 'prompts'" x-transition.opacity style="display:none;">
+    <div class="pj-tabbar">
+      <p class="pj-tabhint muted">Prompty przypięte do projektu (odpięcie nie usuwa promptu).</p>
+      <button type="button" class="btn btn-primary" @click="addPromptOpen = true">{{ icon('plus') }} Dodaj prompt do projektu</button>
+    </div>
+    {% if prompts %}
+    <div class="pj-rows">
+      {% for pr in prompts %}{{ prompt_row(pr, project.id) }}{% endfor %}
+    </div>
+    {% else %}
+    {% call empty_state('terminal', 'Brak promptów', 'Utwórz pierwszy prompt bezpośrednio w tym projekcie.') %}
+      <button type="button" class="btn btn-primary" @click="addPromptOpen = true">{{ icon('plus') }} Dodaj prompt do projektu</button>
+    {% endcall %}
+    {% endif %}
+  </div>
+
+  <!-- ================= PANEL: DOKUMENTY ================= -->
+  <div class="pj-tabpanel" x-show="tab === 'documents'" x-transition.opacity style="display:none;">
+    <div class="pj-tabbar">
+      <p class="pj-tabhint muted">Dokumenty przypięte do projektu (odpięcie nie usuwa dokumentu).</p>
+      <button type="button" class="btn btn-primary" @click="addDocOpen = true">{{ icon('plus') }} Dodaj dokument do projektu</button>
+    </div>
+    {% if documents %}
+    <div class="pj-rows">
+      {% for d in documents %}{{ doc_row(d, project.id) }}{% endfor %}
+    </div>
+    {% else %}
+    {% call empty_state('file-text', 'Brak dokumentów', 'Utwórz pierwszy dokument bezpośrednio w tym projekcie.') %}
+      <button type="button" class="btn btn-primary" @click="addDocOpen = true">{{ icon('plus') }} Dodaj dokument do projektu</button>
+    {% endcall %}
+    {% endif %}
+  </div>
+
+  <!-- ================= PANEL: DRZEWO ================= -->
+  <div class="pj-tabpanel" x-show="tab === 'tree'" x-transition.opacity style="display:none;">
+    <div class="pj-tabbar">
+      <p class="pj-tabhint muted">Żywe drzewo katalogu projektu + ekstrakt kodu do blueprintu.</p>
+    </div>
+    {% if tree and tree.msg %}
+    <div class="{{ 'pj-flash-ok' if tree.msg_ok else 'status-error' }}">{{ tree.msg }}</div>
+    {% endif %}
+    <form method="post" action="/projects/{{ project.id }}/tree/root" class="pj-tree-rootform">
+      <label class="pj-field">
+        <span>Katalog projektu <em>(root_path)</em></span>
+        <input type="text" name="root_path" value="{{ tree.root if tree else '' }}" placeholder="/home/blaise/Projekty/01_AUX/aux/" autocomplete="off">
+      </label>
+      <button type="submit" class="btn btn-primary">💾 Zapisz ścieżkę</button>
+    </form>
+    {% if tree and tree.error %}
+    <div class="status-error">{{ tree.error }}</div>
+    {% elif tree and tree.bundle %}
+    <div class="pj-pills" style="margin-bottom:1rem;">
+      <span class="pj-pill">📁 {{ tree.bundle.stats.files }} plików</span>
+      <span class="pj-pill">💾 {{ tree.bundle.stats.size_h }}</span>
+      {% for ext, cnt in tree.bundle.stats.exts[:6] %}
+      <span class="pj-pill">{{ ext }} × {{ cnt }}</span>
+      {% endfor %}
+      <span class="pj-pill">drzewo: {{ tree.bundle.tree.source }}</span>
+    </div>
+    <div class="pj-tree-grid">
+      <div class="card pj-tree-card">
+        <div class="tr-pane-head"><strong>Drzewo</strong></div>
+        <pre class="pj-tree-pre">{{ tree.bundle.tree.text }}</pre>
+      </div>
+      <div class="pj-tree-side">
+        <div class="card pj-tree-card">
+          <div class="tr-pane-head"><strong>build_context.py</strong></div>
+          <p class="muted" style="font-size:0.85rem;">Skopiuj do katalogu projektu i odpal: <code>python3 build_context.py</code> → wynik w <code>blueprints/full_app.md</code>.</p>
+          <div class="pj-tree-btnrow">
+            <a class="btn btn-primary" href="/projects/{{ project.id }}/tree/script">⬇ Pobierz szablon</a>
+          </div>
+          <div class="pj-tree-tune">
+            <label class="pj-field">
+              <span>Dopasuj szablon modelem</span>
+              <select x-model="tuneModel">
+                <option value="">— wybierz model —</option>
+                {% for m in tree_models %}
+                <option value="{{ m.model_id }}">{{ m.display_name or m.model_id }}{% if m.is_free %} · free{% endif %}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <button type="button" class="btn btn-primary" @click="tuneScript()" :disabled="tuneBusy || !tuneModel">
+              <span x-show="!tuneBusy">✨ Dopasuj</span><span x-show="tuneBusy">Dopasowanie…</span>
+            </button>
+          </div>
+          <div class="status-error" x-show="tuneError" x-text="tuneError" style="display:none;"></div>
+          <div x-show="tunedScript" style="display:none;">
+            <pre class="pj-tree-pre pj-tuned" x-text="tunedScript"></pre>
+            <button type="button" class="btn btn-ghost" @click="downloadTuned()">⬇ Pobierz dopasowany</button>
+          </div>
+        </div>
+        <div class="card pj-tree-card">
+          <div class="tr-pane-head"><strong>Blueprint</strong></div>
+          {% if tree.bundle.blueprint.exists %}
+          <p class="muted" style="font-size:0.85rem;">{{ tree.bundle.blueprint.chars }} znaków · {% if tree.bundle.blueprint.estimated %}≈{% endif %}{{ tree.bundle.blueprint.tokens }} tok</p>
+          <div class="pj-tree-btnrow">
+            {% for bf in tree.bundle.blueprint.files %}
+            <a class="btn btn-ghost" href="/projects/{{ project.id }}/tree/blueprint?f={{ bf.name }}">{{ bf.name }} ({{ bf.size_h }})</a>
+            {% endfor %}
+          </div>
+          <pre class="pj-tree-pre">{{ tree.bundle.blueprint.preview }}</pre>
+          {% if tree.bundle.blueprint.preview_cut %}
+          <p class="muted" style="font-size:0.8rem;">Podgląd obcięty — pobierz całość powyżej.</p>
+          {% endif %}
+          {% else %}
+          <p class="muted">Brak <code>blueprints/full_app.md</code> — pobierz skrypt, odpal go w katalogu projektu i odśwież zakładkę.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% elif not tree or not tree.root %}
+    <p class="muted">Ustaw katalog projektu powyżej, żeby zobaczyć drzewo.</p>
+    {% endif %}
+  </div>
+
+  <!-- ================= MODAL: nowa notatka ================= -->
+  <div class="modal-backdrop" x-show="addNoteOpen" x-transition.opacity
+       @click.self="addNoteOpen = false" @keydown.escape.window="addNoteOpen = false" style="display:none;">
+    <div class="modal-card pj-modal">
+      <div class="pj-modal-head">
+        <h2>Nowa notatka</h2>
+        <button type="button" class="pj-icon-btn" @click="addNoteOpen = false" aria-label="Zamknij">{{ icon('x') }}</button>
+      </div>
+      <form method="post" action="/projects/{{ project.id }}/notes">
+        <label class="pj-field">
+          <span>Tytuł</span>
+          <input type="text" name="title" required maxlength="200" placeholder="np. Ustalenia ze spotkania">
+        </label>
+        <label class="pj-field">
+          <span>Treść</span>
+          <textarea name="content" rows="5" placeholder="Treść notatki…"></textarea>
+        </label>
+        <div class="pj-modal-actions">
+          <button type="button" class="btn btn-ghost" @click="addNoteOpen = false">Anuluj</button>
+          <button type="submit" class="btn btn-primary">{{ icon('plus') }} Dodaj notatkę</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: nowy prompt w projekcie ================= -->
+  <div class="modal-backdrop" x-show="addPromptOpen" x-transition.opacity
+       @click.self="addPromptOpen = false" @keydown.escape.window="addPromptOpen = false" style="display:none;">
+    <div class="modal-card pj-modal">
+      <div class="pj-modal-head">
+        <h2>Nowy prompt w projekcie</h2>
+        <button type="button" class="pj-icon-btn" @click="addPromptOpen = false" aria-label="Zamknij">{{ icon('x') }}</button>
+      </div>
+      <form method="post" action="/projects/{{ project.id }}/prompts">
+        <label class="pj-field">
+          <span>Tytuł</span>
+          <input type="text" name="title" required maxlength="200" placeholder="np. Prompt do opisu produktu">
+        </label>
+        <label class="pj-field">
+          <span>Tryb</span>
+          <select name="mode">
+            <option value="standard">Standard</option>
+            <option value="mega">Mega</option>
+            <option value="systemowy">Systemowy</option>
+          </select>
+        </label>
+        <label class="pj-field">
+          <span>Treść</span>
+          <textarea name="content" rows="5" placeholder="Treść promptu…"></textarea>
+        </label>
+        <div class="pj-modal-actions">
+          <button type="button" class="btn btn-ghost" @click="addPromptOpen = false">Anuluj</button>
+          <button type="submit" class="btn btn-primary">{{ icon('plus') }} Dodaj prompt</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: nowy dokument w projekcie ================= -->
+  <div class="modal-backdrop" x-show="addDocOpen" x-transition.opacity
+       @click.self="addDocOpen = false" @keydown.escape.window="addDocOpen = false" style="display:none;">
+    <div class="modal-card pj-modal">
+      <div class="pj-modal-head">
+        <h2>Nowy dokument w projekcie</h2>
+        <button type="button" class="pj-icon-btn" @click="addDocOpen = false" aria-label="Zamknij">{{ icon('x') }}</button>
+      </div>
+      <form method="post" action="/projects/{{ project.id }}/documents">
+        <label class="pj-field">
+          <span>Tytuł</span>
+          <input type="text" name="title" required maxlength="200" placeholder="np. Specyfikacja wymagań">
+        </label>
+        <label class="pj-field">
+          <span>Treść <em>(Markdown)</em></span>
+          <textarea name="content" rows="5" placeholder="Treść dokumentu…"></textarea>
+        </label>
+        <div class="pj-modal-actions">
+          <button type="button" class="btn btn-ghost" @click="addDocOpen = false">Anuluj</button>
+          <button type="submit" class="btn btn-primary">{{ icon('plus') }} Dodaj dokument</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: edycja notatki ================= -->
+  <div class="modal-backdrop" x-show="editNoteOpen" x-transition.opacity
+       @click.self="editNoteOpen = false" @keydown.escape.window="editNoteOpen = false" style="display:none;">
+    <div class="modal-card pj-modal">
+      <div class="pj-modal-head">
+        <h2>Edytuj notatkę</h2>
+        <button type="button" class="pj-icon-btn" @click="editNoteOpen = false" aria-label="Zamknij">{{ icon('x') }}</button>
+      </div>
+      <form method="post" :action="'/projects/{{ project.id }}/notes/' + editNoteId + '/update'">
+        <label class="pj-field">
+          <span>Tytuł</span>
+          <input type="text" name="title" required maxlength="200" x-model="editNoteTitle">
+        </label>
+        <label class="pj-field">
+          <span>Treść</span>
+          <textarea name="content" rows="5" x-model="editNoteContent"></textarea>
+        </label>
+        <div class="pj-modal-actions">
+          <button type="button" class="btn btn-ghost" @click="editNoteOpen = false">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: usuwanie notatki ================= -->
+  <div class="modal-backdrop" x-show="delNoteOpen" x-transition.opacity
+       @click.self="delNoteOpen = false" @keydown.escape.window="delNoteOpen = false" style="display:none;">
+    <div class="modal-card pj-modal">
+      <div class="pj-modal-head">
+        <h2>Usuń notatkę</h2>
+        <button type="button" class="pj-icon-btn" @click="delNoteOpen = false" aria-label="Zamknij">{{ icon('x') }}</button>
+      </div>
+      <p>Czy na pewno usunąć notatkę <strong x-text="delNoteTitle"></strong>? Operacji nie można cofnąć.</p>
+      <form method="post" :action="'/projects/{{ project.id }}/notes/' + delNoteId + '/delete'">
+        <div class="pj-modal-actions">
+          <button type="button" class="btn btn-ghost" @click="delNoteOpen = false">Anuluj</button>
+          <button type="submit" class="btn btn-danger">{{ icon('trash') }} Usuń</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: odpięcie promptu/dokumentu ================= -->
+  <div class="modal-backdrop" x-show="unOpen" x-transition.opacity
+       @click.self="unOpen = false" @keydown.escape.window="unOpen = false" style="display:none;">
+    <div class="modal-card pj-modal">
+      <div class="pj-modal-head">
+        <h2>Odepnij od projektu</h2>
+        <button type="button" class="pj-icon-btn" @click="unOpen = false" aria-label="Zamknij">{{ icon('x') }}</button>
+      </div>
+      <p>Odpiąć <span x-text="unKind"></span> <strong x-text="unName"></strong> od tego projektu? Element pozostanie w swoim module.</p>
+      <form method="post" :action="unAction">
+        <div class="pj-modal-actions">
+          <button type="button" class="btn btn-ghost" @click="unOpen = false">Anuluj</button>
+          <button type="submit" class="btn btn-danger">Odepnij</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+function noteData(el) {
+  var row = el.closest('[data-nid]');
+  var c = row.querySelector('[data-note-content]');
+  return { id: row.dataset.nid, title: row.dataset.title, content: c ? c.textContent : '' };
+}
+function projectDetail(initialTab) {
+  var allowed = ['notes', 'prompts', 'documents', 'tree'];
+  return {
+    tab: allowed.includes(initialTab) ? initialTab : 'notes',
+    addNoteOpen: false, addPromptOpen: false, addDocOpen: false,
+    editNoteOpen: false, editNoteId: null, editNoteTitle: '', editNoteContent: '',
+    delNoteOpen: false, delNoteId: null, delNoteTitle: '',
+    unOpen: false, unAction: '', unName: '', unKind: '',
+    tuneModel: '', tuneBusy: false, tuneError: '', tunedScript: '',
+    openNoteEdit(id, title, content) { this.editNoteId = id; this.editNoteTitle = title || ''; this.editNoteContent = content || ''; this.editNoteOpen = true; },
+    openNoteDelete(id, title) { this.delNoteId = id; this.delNoteTitle = title || ''; this.delNoteOpen = true; },
+    openUnassign(action, name, kind) { this.unAction = action || ''; this.unName = name || ''; this.unKind = kind || ''; this.unOpen = true; },
+    async tuneScript() {
+      if (this.tuneBusy || !this.tuneModel) return;
+      this.tuneBusy = true; this.tuneError = ''; this.tunedScript = '';
+      try {
+        var res = await fetch('/projects/{{ project.id }}/tree/tune', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({model_id: this.tuneModel})
+        });
+        var d = await res.json();
+        if (d.status === 'ok') this.tunedScript = d.script || '';
+        else this.tuneError = d.error || 'Błąd';
+      } catch (e) {
+        this.tuneError = 'Błąd połączenia: ' + ((e && e.message) || e);
+      }
+      this.tuneBusy = false;
+    },
+    downloadTuned() {
+      if (!this.tunedScript) return;
+      var blob = new Blob([this.tunedScript], {type: 'text/x-python'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'build_context.py';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }
+  };
+}
+</script>
+{% endblock %}
+
+

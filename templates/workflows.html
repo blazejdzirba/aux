@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}Workflow — Vibe Center{% endblock %}
+{% block content %}
+<div class="pj-page" x-data="workflowApp()" x-init="init()">
+  <div class="pj-head">
+    <div>
+      <h1 class="pj-title">Workflow</h1>
+      <p class="pj-sub muted">Statyczne ściągi procesów — te same prompty i szablony zawsze pod ręką.</p>
+    </div>
+  </div>
+
+  <div class="wf-layout">
+    <aside class="card wf-side">
+      <div class="wf-side-head">
+        <strong>Procesy</strong>
+        <button type="button" class="btn btn-ghost" @click="newWorkflow()">＋ Nowy</button>
+      </div>
+      <ul class="wf-list">
+        <template x-for="w in workflows" :key="w.id">
+          <li :class="w.id === selectedId && 'active'">
+            <button type="button" class="wf-list-name" @click="select(w.id)">
+              <span x-text="w.name"></span>
+              <span class="muted" x-text="'(' + w.step_list.length + ')'"></span>
+            </button>
+            <span class="wf-list-btns">
+              <button type="button" class="btn btn-ghost" @click="editWorkflow(w)" title="Edytuj">✏️</button>
+              <button type="button" class="btn btn-ghost" @click="delWorkflow(w)" title="Usuń">🗑</button>
+            </span>
+          </li>
+        </template>
+      </ul>
+      <p class="muted" x-show="!workflows.length">Brak procesów — utwórz pierwszy.</p>
+      <div class="wf-form" x-show="wfFormOpen" style="display:none;">
+        <label>Nazwa<input type="text" x-model="wfForm.name" placeholder="Np. Proces MVP"></label>
+        <label>Opis<input type="text" x-model="wfForm.description" placeholder="Do czego ten proces"></label>
+        <div class="fd-row">
+          <button type="button" class="btn btn-primary" @click="saveWorkflow()">💾 Zapisz</button>
+          <button type="button" class="btn btn-ghost" @click="wfFormOpen = false">Anuluj</button>
+        </div>
+      </div>
+    </aside>
+
+    <section>
+      <template x-if="current()">
+        <div>
+          <div class="pj-head">
+            <div>
+              <h2 class="pj-title" style="font-size:1.3rem;" x-text="current().name"></h2>
+              <p class="pj-sub muted" x-text="current().description || 'Brak opisu'"></p>
+            </div>
+            <button type="button" class="btn btn-primary" @click="newStep()" x-show="!stepFormOpen">＋ Dodaj krok</button>
+          </div>
+          <template x-for="(s, i) in current().step_list" :key="s.id">
+            <div class="card wf-step">
+              <div class="wf-step-head">
+                <span class="wf-num" x-text="i + 1"></span>
+                <strong x-text="s.title"></strong>
+                <span class="wf-step-btns">
+                  <button type="button" class="btn btn-ghost" @click="moveStep(s, 'up')" title="W górę">⬆</button>
+                  <button type="button" class="btn btn-ghost" @click="moveStep(s, 'down')" title="W dół">⬇</button>
+                  <button type="button" class="btn btn-ghost" @click="editStep(s)" title="Edytuj">✏️</button>
+                  <button type="button" class="btn btn-ghost" @click="delStep(s)" title="Usuń">🗑</button>
+                </span>
+              </div>
+              <p class="muted wf-instr" x-text="s.instructions" x-show="s.instructions"></p>
+              <div class="wf-block" x-show="s.prompt">
+                <div class="wf-block-head">
+                  <span>Prompt</span>
+                  <button type="button" class="btn btn-ghost" @click="copy(s.prompt)">📋 Kopiuj</button>
+                </div>
+                <pre x-text="s.prompt"></pre>
+              </div>
+              <div class="wf-block" x-show="s.template_body">
+                <div class="wf-block-head">
+                  <span>Szablon: <code x-text="s.template_name || '(bez nazwy)'"></code></span>
+                  <button type="button" class="btn btn-ghost" @click="copy(s.template_body)">📋 Kopiuj</button>
+                </div>
+                <pre x-text="s.template_body"></pre>
+              </div>
+            </div>
+          </template>
+          <p class="muted" x-show="!current().step_list.length && !stepFormOpen">Brak kroków — dodaj pierwszy.</p>
+          <div class="card wf-form-card" x-show="stepFormOpen" style="display:none;">
+            <div class="wf-form">
+              <label>Tytuł kroku<input type="text" x-model="stepForm.title" placeholder="Np. Ustalenie stacku"></label>
+              <label>Instrukcja<textarea x-model="stepForm.instructions" rows="3" placeholder="Co robisz w tym kroku…"></textarea></label>
+              <label>Prompt<textarea x-model="stepForm.prompt" rows="6" placeholder="Gotowa wklejka dla agenta…"></textarea></label>
+              <label>Nazwa szablonu dokumentu<input type="text" x-model="stepForm.template_name" placeholder="Np. project_context.md"></label>
+              <label>Treść szablonu<textarea x-model="stepForm.template_body" rows="6" placeholder="Szkielet dokumentu…"></textarea></label>
+              <div class="fd-row">
+                <button type="button" class="btn btn-primary" @click="saveStep()">💾 Zapisz krok</button>
+                <button type="button" class="btn btn-ghost" @click="stepFormOpen = false">Anuluj</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+      <p class="muted" x-show="!current()">Wybierz proces z listy.</p>
+    </section>
+  </div>
+
+  <p class="muted tr-info" x-show="copiedMsg" x-text="copiedMsg" style="display:none;"></p>
+  <div class="status-error" x-show="error" x-text="error" style="display:none; margin-top:1rem;"></div>
+</div>
+<script type="application/json" id="workflows-data">{{ workflows | tojson }}</script>
+<script>
+function workflowApp() {
+  return {
+    workflows: [],
+    selectedId: null,
+    error: '',
+    copiedMsg: '',
+    copyTimer: null,
+    wfFormOpen: false,
+    wfForm: {id: null, name: '', description: ''},
+    stepFormOpen: false,
+    stepForm: {id: null, title: '', instructions: '', prompt: '', template_name: '', template_body: ''},
+    init() {
+      try {
+        this.workflows = JSON.parse(document.getElementById('workflows-data').textContent) || [];
+      } catch (e) { this.workflows = []; }
+      try {
+        var s = parseInt(localStorage.getItem('wf-selected') || '', 10);
+        if (this.workflows.some(function (w) { return w.id === s; })) this.selectedId = s;
+        else if (this.workflows.length) this.selectedId = this.workflows[0].id;
+      } catch (e) {}
+    },
+    saveSel() {
+      try { localStorage.setItem('wf-selected', String(this.selectedId)); } catch (e) {}
+    },
+    current() {
+      var id = this.selectedId;
+      return this.workflows.find(function (w) { return w.id === id; }) || null;
+    },
+    select(id) {
+      this.selectedId = id;
+      this.stepFormOpen = false;
+      this.saveSel();
+    },
+    flashCopy(msg) {
+      var self = this;
+      self.copiedMsg = msg;
+      if (self.copyTimer) clearTimeout(self.copyTimer);
+      self.copyTimer = setTimeout(function () { self.copiedMsg = ''; }, 2000);
+    },
+    async copy(text) {
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        this.flashCopy('Skopiowano ✓');
+      } catch (e) {
+        this.error = 'Kopiowanie nieudane — zaznacz tekst ręcznie.';
+      }
+    },
+    async loadAll(keepSel) {
+      var want = keepSel ? this.selectedId : null;
+      try {
+        var res = await fetch('/workflows/api');
+        var d = await res.json();
+        if (d.status === 'ok') {
+          this.workflows = d.workflows;
+          if (want && this.workflows.some(function (w) { return w.id === want; })) this.selectedId = want;
+          else if (!this.workflows.some(function (w) { return w.id === this.selectedId; }.bind(this))) {
+            this.selectedId = this.workflows.length ? this.workflows[0].id : null;
+          }
+          this.saveSel();
+        }
+      } catch (e) {}
+    },
+    newWorkflow() {
+      this.wfForm = {id: null, name: '', description: ''};
+      this.error = '';
+      this.wfFormOpen = true;
+    },
+    editWorkflow(w) {
+      this.wfForm = {id: w.id, name: w.name, description: w.description || ''};
+      this.error = '';
+      this.wfFormOpen = true;
+    },
+    async saveWorkflow() {
+      this.error = '';
+      if (!this.wfForm.name.trim()) { this.error = 'Nazwa procesu jest wymagana.'; return; }
+      try {
+        var url = '/workflows/api' + (this.wfForm.id ? '/' + this.wfForm.id : '');
+        var res = await fetch(url, {
+          method: this.wfForm.id ? 'PUT' : 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(this.wfForm)
+        });
+        var d = await res.json();
+        if (d.status !== 'ok') { this.error = d.error || 'Błąd zapisu'; return; }
+        this.wfFormOpen = false;
+        if (d.id) this.selectedId = d.id;
+        await this.loadAll(true);
+      } catch (e) {
+        this.error = 'Błąd połączenia: ' + ((e && e.message) || e);
+      }
+    },
+    async delWorkflow(w) {
+      if (!confirm('Usunąć proces "' + w.name + '" i wszystkie jego kroki?')) return;
+      try {
+        var res = await fetch('/workflows/api/' + w.id, {method: 'DELETE'});
+        var d = await res.json();
+        if (d.status !== 'ok') { this.error = d.error || 'Błąd usuwania'; return; }
+        if (this.selectedId === w.id) this.selectedId = null;
+        await this.loadAll(false);
+      } catch (e) {
+        this.error = 'Błąd połączenia: ' + ((e && e.message) || e);
+      }
+    },
+    newStep() {
+      this.stepForm = {id: null, title: '', instructions: '', prompt: '', template_name: '', template_body: ''};
+      this.error = '';
+      this.stepFormOpen = true;
+    },
+    editStep(s) {
+      this.stepForm = {id: s.id, title: s.title, instructions: s.instructions || '', prompt: s.prompt || '', template_name: s.template_name || '', template_body: s.template_body || ''};
+      this.error = '';
+      this.stepFormOpen = true;
+    },
+    async saveStep() {
+      this.error = '';
+      if (!this.stepForm.title.trim()) { this.error = 'Tytuł kroku jest wymagany.'; return; }
+      if (!this.selectedId) { this.error = 'Wybierz proces.'; return; }
+      try {
+        var url = this.stepForm.id
+          ? '/workflows/api/steps/' + this.stepForm.id
+          : '/workflows/api/' + this.selectedId + '/steps';
+        var res = await fetch(url, {
+          method: this.stepForm.id ? 'PUT' : 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(this.stepForm)
+        });
+        var d = await res.json();
+        if (d.status !== 'ok') { this.error = d.error || 'Błąd zapisu'; return; }
+        this.stepFormOpen = false;
+        await this.loadAll(true);
+      } catch (e) {
+        this.error = 'Błąd połączenia: ' + ((e && e.message) || e);
+      }
+    },
+    async delStep(s) {
+      if (!confirm('Usunąć krok "' + s.title + '"?')) return;
+      try {
+        var res = await fetch('/workflows/api/steps/' + s.id, {method: 'DELETE'});
+        var d = await res.json();
+        if (d.status !== 'ok') { this.error = d.error || 'Błąd usuwania'; return; }
+        await this.loadAll(true);
+      } catch (e) {
+        this.error = 'Błąd połączenia: ' + ((e && e.message) || e);
+      }
+    },
+    async moveStep(s, dir) {
+      try {
+        await fetch('/workflows/api/steps/' + s.id + '/move', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({dir: dir})
+        });
+        await this.loadAll(true);
+      } catch (e) {}
+    }
+  };
+}
+</script>
+{% endblock %}

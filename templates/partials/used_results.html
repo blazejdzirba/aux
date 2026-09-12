@@ -6,41 +6,9 @@
     </span>
   </div>
 
-  <div class="toolbar">
-    <input type="search" name="query" placeholder="Filtruj po nazwie..." value="{{ query }}"
-           hx-get="/models/used" hx-trigger="keyup changed delay:400ms" hx-include="#used-form"
-           hx-target="#models-tabpanel" hx-swap="innerHTML">
-
-    <label class="muted" style="display:flex; align-items:center; gap:0.4rem;">
-      Sortuj:
-      <select name="sort" hx-get="/models/used" hx-trigger="change" hx-include="#used-form"
-              hx-target="#models-tabpanel" hx-swap="innerHTML">
-        <option value="name" {% if sort == 'name' %}selected{% endif %}>Nazwa</option>
-        <option value="status" {% if sort == 'status' %}selected{% endif %}>Status</option>
-        <option value="latency" {% if sort == 'latency' %}selected{% endif %}>Latencja</option>
-      </select>
-    </label>
-
-    <label class="checkbox-label">
-      <input type="checkbox" name="free" value="1" {% if free %}checked{% endif %}
-             hx-get="/models/used" hx-trigger="change" hx-include="#used-form"
-             hx-target="#models-tabpanel" hx-swap="innerHTML">
-      FREE
-    </label>
-
-    <div class="toolbar-spacer"></div>
-
-    <button type="button" class="btn" hx-post="/models/test-all" hx-include="#used-form"
-            hx-target="#models-tabpanel" hx-swap="innerHTML">🔄 Testuj wszystkie</button>
-    <button type="button" class="btn btn-primary" hx-post="/models/test-selected" hx-include="#used-form"
-            hx-target="#models-tabpanel" hx-swap="innerHTML">
-      ⚡ Testuj zaznaczone (<span id="used-sel-count">0</span>)
-    </button>
-  </div>
-
   <div id="used-groups">
     {% for prefix, group_models in groups.items() %}
-    <details class="model-group" open>
+    <details class="model-group" {% if query or free %}open{% endif %}>
       <summary>
         <label class="checkbox-label" onclick="event.stopPropagation()">
           <input type="checkbox" onclick="const on=this.checked; this.closest('details').querySelectorAll('input[name=selected]').forEach(cb=>cb.checked=on); document.dispatchEvent(new Event('used-selection-changed'));">
@@ -62,10 +30,3 @@
   </div>
 </form>
 <div id="model-info-modal"></div>
-
-<script>
-  document.addEventListener('used-selection-changed', function () {
-    var n = document.querySelectorAll('#used-groups input[name="selected"]:checked').length;
-    var el = document.getElementById('used-sel-count'); if (el) el.textContent = n;
-  });
-</script>

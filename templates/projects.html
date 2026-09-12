@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/empty_state.html" import empty_state %}
+{% from "partials/project_card.html" import project_card %}
+{% block title %}Projekty — Vibe Center{% endblock %}
+{% block content %}
+<div class="pj-page" x-data="projectsPage()"
+     @pj-edit.window="openEdit($event.detail.pid, $event.detail.title, $event.detail.desc)"
+     @pj-delete.window="openDelete($event.detail.pid, $event.detail.title)">
+  <div class="pj-head">
+    <div>
+      <h1 class="pj-title">Projekty</h1>
+      <p class="pj-sub muted">Kontenery grupujące powiązane prompty, dokumenty i notatki.</p>
+    </div>
+    <button type="button" class="btn btn-primary" @click="createOpen = true; $nextTick(() => $refs.createTitle.focus())">{{ icon('plus') }} Nowy projekt</button>
+  </div>
+
+  {% if projects %}
+  <div class="pj-grid">
+    {% for p in projects %}{{ project_card(p) }}{% endfor %}
+  </div>
+  {% else %}
+  {% call empty_state('folder', 'Brak projektów', 'Utwórz pierwszy projekt, aby grupować powiązane prompty, dokumenty i notatki w jednym miejscu.') %}
+    <button type="button" class="btn btn-primary" @click="createOpen = true; $nextTick(() => $refs.createTitle.focus())">{{ icon('plus') }} Nowy projekt</button>
+  {% endcall %}
+  {% endif %}
+
+  <!-- ================= MODAL: nowy projekt ================= -->
+  <div class="modal-backdrop" x-show="createOpen" x-transition.opacity
+       @click.self="createOpen = false" @keydown.escape.window="createOpen = false" style="display:none;">
+    <div class="modal-card pj-modal">
+      <div class="pj-modal-head">
+        <h2>Nowy projekt</h2>
+        <button type="button" class="pj-icon-btn" @click="createOpen = false" aria-label="Zamknij">{{ icon('x') }}</button>
+      </div>
+      <form method="post" action="/projects">
+        <label class="pj-field">
+          <span>Nazwa projektu</span>
+          <input type="text" name="title" required maxlength="120" placeholder="np. Kampania launchowa" x-ref="createTitle">
+        </label>
+        <label class="pj-field">
+          <span>Opis <em>(opcjonalnie)</em></span>
+          <textarea name="description" rows="3" maxlength="500" placeholder="Krótki opis, po co ten projekt…"></textarea>
+        </label>
+        <div class="pj-modal-actions">
+          <button type="button" class="btn btn-ghost" @click="createOpen = false">Anuluj</button>
+          <button type="submit" class="btn btn-primary">{{ icon('plus') }} Utwórz projekt</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: edycja projektu ================= -->
+  <div class="modal-backdrop" x-show="editOpen" x-transition.opacity
+       @click.self="editOpen = false" @keydown.escape.window="editOpen = false" style="display:none;">
+    <div class="modal-card pj-modal">
+      <div class="pj-modal-head">
+        <h2>Edytuj projekt</h2>
+        <button type="button" class="pj-icon-btn" @click="editOpen = false" aria-label="Zamknij">{{ icon('x') }}</button>
+      </div>
+      <form method="post" :action="'/projects/' + editId + '/update'">
+        <label class="pj-field">
+          <span>Nazwa projektu</span>
+          <input type="text" name="title" required maxlength="120" x-model="editTitle">
+        </label>
+        <label class="pj-field">
+          <span>Opis <em>(opcjonalnie)</em></span>
+          <textarea name="description" rows="3" maxlength="500" x-model="editDesc"></textarea>
+        </label>
+        <div class="pj-modal-actions">
+          <button type="button" class="btn btn-ghost" @click="editOpen = false">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: usuwanie projektu ================= -->
+  <div class="modal-backdrop" x-show="delOpen" x-transition.opacity
+       @click.self="delOpen = false" @keydown.escape.window="delOpen = false" style="display:none;">
+    <div class="modal-card pj-modal">
+      <div class="pj-modal-head">
+        <h2>Usuń projekt</h2>
+        <button type="button" class="pj-icon-btn" @click="delOpen = false" aria-label="Zamknij">{{ icon('x') }}</button>
+      </div>
+      <p>Czy na pewno usunąć projekt <strong x-text="delTitle"></strong>? Operacji nie można cofnąć.</p>
+      <form method="post" :action="'/projects/' + delId + '/delete'">
+        <div class="pj-modal-actions">
+          <button type="button" class="btn btn-ghost" @click="delOpen = false">Anuluj</button>
+          <button type="submit" class="btn btn-danger">{{ icon('trash') }} Usuń</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+function projectsPage() {
+  return {
+    createOpen: false,
+    editOpen: false, editId: null, editTitle: "", editDesc: "",
+    delOpen: false, delId: null, delTitle: "",
+    openEdit(id, title, desc) { this.editId = id; this.editTitle = title || ""; this.editDesc = desc || ""; this.editOpen = true; },
+    openDelete(id, title) { this.delId = id; this.delTitle = title || ""; this.delOpen = true; }
+  };
+}
+</script>
+{% endblock %}

@@ -1,24 +1,164 @@
 {% extends "base.html" %}
 {% block title %}Modele — AUX{% endblock %}
 {% block content %}
-<h1 style="margin-bottom:0.25rem;">🤖 Modele AI</h1>
-<p class="muted" style="margin-top:0;">Katalog modeli providera, testowanie łączności oraz lista modeli w użyciu</p>
+<div class="models-page">
+  <h1 style="margin-bottom:0.25rem;">🤖 Modele AI</h1>
+  <p class="muted" style="margin-top:0;">Katalog modeli providera, testowanie łączności oraz lista modeli w użyciu</p>
 
-<div x-data="{ tab: 'catalog' }">
-  <div class="tabs">
-    <button type="button" class="tab-btn" :class="tab === 'catalog' ? 'active' : ''"
-            @click="tab = 'catalog'"
-            hx-get="/models/catalog" hx-target="#models-tabpanel" hx-swap="innerHTML">
-      🔬 Testowanie
-    </button>
-    <button type="button" class="tab-btn" :class="tab === 'used' ? 'active' : ''"
-            @click="tab = 'used'"
-            hx-get="/models/used" hx-target="#models-tabpanel" hx-swap="innerHTML">
-      ✅ W użyciu <span class="chip">{{ used_count }}</span>
-    </button>
-  </div>
-  <div id="models-tabpanel" hx-get="/models/catalog" hx-trigger="load" hx-swap="innerHTML">
-    <p class="muted">Wczytywanie…</p>
+  <div x-data="{ tab: 'catalog' }" class="models-body">
+    <div class="tabs">
+      <button type="button" class="tab-btn" :class="tab === 'catalog' ? 'active' : ''"
+              @click="tab = 'catalog'"
+              hx-get="/models/catalog" hx-target="#models-tabpanel" hx-swap="innerHTML">
+        🔬 Testowanie
+      </button>
+      <button type="button" class="tab-btn" :class="tab === 'used' ? 'active' : ''"
+              @click="tab = 'used'"
+              hx-get="/models/used" hx-target="#models-tabpanel" hx-swap="innerHTML">
+        ✅ W użyciu <span class="chip">{{ used_count }}</span>
+      </button>
+      <button type="button" class="tab-btn" :class="tab === 'fav' ? 'active' : ''"
+              @click="tab = 'fav'"
+              hx-get="/models/favorites" hx-target="#models-tabpanel" hx-swap="innerHTML">
+        ⭐ Ulubione <span class="chip">{{ fav_count }}</span>
+      </button>
+    </div>
+
+    <!-- Pasek akcji: Testowanie — POZA scrollowaną listą, zawsze widoczny -->
+    <div x-show="tab === 'catalog'">
+      <div class="toolbar models-actionbar" id="catalog-toolbar">
+        <input type="search" name="query" placeholder="Filtruj po nazwie modelu..."
+               hx-get="/models/catalog" hx-trigger="keyup changed delay:400ms" hx-include="#catalog-toolbar, #catalog-form"
+               hx-target="#models-tabpanel" hx-swap="innerHTML">
+
+        <select name="provider" hx-get="/models/catalog" hx-trigger="change" hx-include="#catalog-toolbar, #catalog-form"
+                hx-target="#models-tabpanel" hx-swap="innerHTML">
+          <option value="">Providerzy ({{ providers_all|length }})</option>
+          {% for p in providers_all %}
+            <option value="{{ p }}">{{ p }}</option>
+          {% endfor %}
+        </select>
+
+        <label class="checkbox-label">
+          <input type="checkbox" name="free" value="1"
+                 hx-get="/models/catalog" hx-trigger="change" hx-include="#catalog-toolbar, #catalog-form"
+                 hx-target="#models-tabpanel" hx-swap="innerHTML">
+          FREE
+        </label>
+
+        <label class="checkbox-label" title="Testowane modele od razu trafiają do zakładki „W użyciu”">
+          <input type="checkbox" name="auto_add" value="1" checked>
+          Automatycznie dodaj do używanych
+        </label>
+
+        <div class="toolbar-spacer"></div>
+
+        <button type="button" class="btn btn-primary" hx-post="/models/catalog/test" hx-include="#catalog-toolbar, #catalog-form"
+                hx-target="#models-tabpanel" hx-swap="innerHTML" hx-indicator="#catalog-test-spinner">
+          <span id="catalog-test-spinner" class="spinner htmx-indicator"></span>
+          ⚡ Testuj <span id="sel-count">0</span>
+        </button>
+        <button type="button" class="btn btn-danger" hx-post="/models/catalog/hide" hx-include="#catalog-toolbar, #catalog-form"
+                hx-target="#models-tabpanel" hx-swap="innerHTML" hx-confirm="Ukryć zaznaczone modele z katalogu (na trwałe)?">
+          🗑 Usuń zaznaczone
+        </button>
+      </div>
+    </div>
+
+    <!-- Pasek akcji: W użyciu — POZA scrollowaną listą, zawsze widoczny -->
+    <div x-show="tab === 'used'" x-cloak style="display:none;">
+      <div class="toolbar models-actionbar" id="used-toolbar">
+        <input type="search" name="query" placeholder="Filtruj po nazwie..."
+               hx-get="/models/used" hx-trigger="keyup changed delay:400ms" hx-include="#used-toolbar, #used-form"
+               hx-target="#models-tabpanel" hx-swap="innerHTML">
+
+        <label class="muted" style="display:flex; align-items:center; gap:0.4rem;">
+          Sortuj:
+          <select name="sort" hx-get="/models/used" hx-trigger="change" hx-include="#used-toolbar, #used-form"
+                  hx-target="#models-tabpanel" hx-swap="innerHTML">
+            <option value="name">Nazwa</option>
+            <option value="status">Status</option>
+            <option value="latency">Latencja</option>
+          </select>
+        </label>
+
+        <label class="checkbox-label">
+          <input type="checkbox" name="free" value="1"
+                 hx-get="/models/used" hx-trigger="change" hx-include="#used-toolbar, #used-form"
+                 hx-target="#models-tabpanel" hx-swap="innerHTML">
+          FREE
+        </label>
+
+        <div class="toolbar-spacer"></div>
+
+        <button type="button" class="btn" hx-post="/models/test-all" hx-include="#used-toolbar, #used-form"
+                hx-target="#models-tabpanel" hx-swap="innerHTML" hx-indicator="#used-all-spinner">
+          <span id="used-all-spinner" class="spinner htmx-indicator"></span>🔄 Testuj wszystkie</button>
+        <button type="button" class="btn btn-primary" hx-post="/models/test-selected" hx-include="#used-toolbar, #used-form"
+                hx-target="#models-tabpanel" hx-swap="innerHTML" hx-indicator="#used-sel-spinner">
+          <span id="used-sel-spinner" class="spinner htmx-indicator"></span>⚡ Testuj zaznaczone (<span id="used-sel-count">0</span>)
+        </button>
+      </div>
+    </div>
+
+    <!-- Pasek akcji: Ulubione — POZA scrollowaną listą, zawsze widoczny -->
+    <div x-show="tab === 'fav'" x-cloak style="display:none;">
+      <div class="toolbar models-actionbar" id="fav-toolbar">
+        <input type="search" name="query" placeholder="Filtruj po nazwie..."
+               hx-get="/models/favorites" hx-trigger="keyup changed delay:400ms" hx-include="#fav-toolbar, #fav-form"
+               hx-target="#models-tabpanel" hx-swap="innerHTML">
+
+        <label class="muted" style="display:flex; align-items:center; gap:0.4rem;">
+          Sortuj:
+          <select name="sort" hx-get="/models/favorites" hx-trigger="change" hx-include="#fav-toolbar, #fav-form"
+                  hx-target="#models-tabpanel" hx-swap="innerHTML">
+            <option value="name">Nazwa</option>
+            <option value="status">Status</option>
+            <option value="latency">Latencja</option>
+          </select>
+        </label>
+
+        <label class="checkbox-label">
+          <input type="checkbox" name="free" value="1"
+                 hx-get="/models/favorites" hx-trigger="change" hx-include="#fav-toolbar, #fav-form"
+                 hx-target="#models-tabpanel" hx-swap="innerHTML">
+          FREE
+        </label>
+
+        <div class="toolbar-spacer"></div>
+
+        <button type="button" class="btn" hx-post="/models/favorites/test-all" hx-include="#fav-toolbar, #fav-form"
+                hx-target="#models-tabpanel" hx-swap="innerHTML" hx-indicator="#fav-all-spinner">
+          <span id="fav-all-spinner" class="spinner htmx-indicator"></span>🔄 Testuj wszystkie</button>
+        <button type="button" class="btn btn-primary" hx-post="/models/test-selected" hx-include="#fav-toolbar, #fav-form"
+                hx-target="#models-tabpanel" hx-swap="innerHTML" hx-indicator="#fav-sel-spinner">
+          <span id="fav-sel-spinner" class="spinner htmx-indicator"></span>⚡ Testuj zaznaczone (<span id="fav-sel-count">0</span>)
+        </button>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div id="models-tabpanel" hx-get="/models/catalog" hx-trigger="load" hx-swap="innerHTML">
+        <p class="muted">Wczytywanie…</p>
+      </div>
+    </div>
   </div>
 </div>
+<script>
+  // Liczniki zaznaczeń (jeden listener na dokument — pasek akcji żyje
+  // poza podmienianym panelem, więc skrypt też musi żyć poza nim).
+  document.addEventListener('catalog-selection-changed', function () {
+    var n = document.querySelectorAll('#catalog-groups input[name="selected"]:checked').length;
+    var a = document.getElementById('sel-count'); if (a) a.textContent = n;
+    var b = document.getElementById('wybrano-count'); if (b) b.textContent = n;
+  });
+  document.addEventListener('used-selection-changed', function () {
+    var n = document.querySelectorAll('#used-groups input[name="selected"]:checked').length;
+    var el = document.getElementById('used-sel-count'); if (el) el.textContent = n;
+  });
+  document.addEventListener('fav-selection-changed', function () {
+    var n = document.querySelectorAll('#fav-groups input[name="selected"]:checked').length;
+    var el = document.getElementById('fav-sel-count'); if (el) el.textContent = n;
+  });
+</script>
 {% endblock %}

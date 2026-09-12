@@ -21,7 +21,7 @@ chk "sekcja: Zasoby"          "$(echo "$HTML" | grep -c '>Zasoby<')"
 chk "sekcja: Praca"           "$(echo "$HTML" | grep -c '>Praca<')"
 chk "link /resources"         "$(echo "$HTML" | grep -c 'href="/resources"')"
 chk "link /prompts"           "$(echo "$HTML" | grep -c 'href="/prompts"')"
-chk "link /prompt-optimizer"  "$(echo "$HTML" | grep -c 'href="/prompt-optimizer"')"
+chk "link /optimizer"  "$(echo "$HTML" | grep -c 'href="/optimizer"')"
 chk "brak zepsutych linkow (learn/cheatsheets/projects/stacks)" "$(echo "$HTML" | grep -cE 'href="/(learn|cheatsheets|projects|stacks)"')"
 
 # 3. nowy motyw w css (zloto)
@@ -49,9 +49,18 @@ chk "prompt widoczny na /prompts"  "$(curl -s $B/prompts | grep -c 'TRESC TESTOW
 PID=$(sqlite3 data/aux.db "SELECT id FROM saved_prompts WHERE title='Plan Test';")
 chk "DELETE prompta"               "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE $B/prompts/$PID | grep -c 200)"
 
-# 6. Optymalizator: osobny URL otwiera zakladke
-chk "/prompt-optimizer -> zakladka optimizer" "$(curl -s $B/prompt-optimizer | grep -c "tab: 'optimizer'")"
-chk "/playground -> zakladka playground"      "$(curl -s $B/playground | grep -c "tab: 'playground'")"
+# 6. Playground (Chat UI) i Optymalizator: calkiem osobne strony
+PG=$(curl -s $B/playground)
+OP=$(curl -s $B/optimizer)
+chk "/playground: chat UI"                    "$(echo "$PG" | grep -c 'chat-page')"
+chk "/playground: endpoint czatu"             "$(echo "$PG" | grep -c '/playground/chat')"
+chk "/playground: przycisk Wyczyść czat"      "$(echo "$PG" | grep -c 'Wyczyść czat')"
+chk "/playground: markdown (marked)"          "$(echo "$PG" | grep -c 'marked@12')"
+chk "/playground: brak optymalizatora"        "$(if echo "$PG" | grep -q 'hx-post="/optimizer/optimize"'; then echo 0; else echo 1; fi)"
+chk "/optimizer: formularz optymalizatora"     "$(echo "$OP" | grep -c 'hx-post="/optimizer/optimize"')"
+chk "/optimizer: brak playground"              "$(if echo "$OP" | grep -q 'playground-result'; then echo 0; else echo 1; fi)"
+chk "/models: brak tab: 'playground'"          "$(if curl -s $B/models | grep -q "tab: 'playground'"; then echo 0; else echo 1; fi)"
+chk "/prompt-optimizer -> redirect 302"        "$(curl -s -o /dev/null -w '%{http_code}' $B/prompt-optimizer | grep -c 302)"
 
 # 7. Settings: dropdown modelu optymalizatora
 ST=$(curl -s $B/settings)

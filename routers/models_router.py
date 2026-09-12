@@ -6,22 +6,30 @@ from fastapi.templating import Jinja2Templates
 from models import (
     list_ai_models, get_model, delete_model, upsert_model, used_count,
     group_models_by_prefix, update_model_notes, get_provider_by_slug,
-    update_model_status,
+    set_favorite, list_favorite_models, favorite_count,
+    update_model_status, fmt_context, backfill_context_from_catalog,
 )
 from catalog import list_used_model_ids, list_ignored_model_ids, ignore_models
 from services.model_monitor import check_single_model
+from services.batch_tester import start_catalog_batch, start_used_batch, get_job
 from services.catalog_client import fetch_catalog, group_by_provider
 from services.omniroute_client import run_prompt
 
 router = APIRouter(prefix="/models", tags=["models"])
 templates = Jinja2Templates(directory="templates")
+templates.env.filters["ctx"] = fmt_context
 
 
 @router.get("", response_class=HTMLResponse)
 async def models_page(request: Request):
+    # Lista providerów do statycznego paska akcji (katalog jest cache'owany).
+    try:
+        providers_all = sorted({it["provider_prefix"] for it in fetch_catalog()})
+    except Exception:
+        providers_all = []
     return templates.TemplateResponse(
         request, "models.html",
-        {"active_page": "models", "used_count": used_count()},
+        {"active_page": "models", "used_count": used_count(), "fav_count": favorite_count(), "providers_all": providers_all},
     )
 
 
@@ -84,24 +92,23 @@ async def catalog_test(
     provider: str = Form(""),
     free: str = Form(""),
 ):
-    provider_row = get_provider_by_slug("omniroute")
-    do_add = auto_add == "1"
-    ephemeral: dict[str, dict] = {}
-    for model_id in selected:
-        try:
-            result = run_prompt(model_id, "Ping")
-        except Exception as e:
-            result = {"status": "error", "error": str(e), "latency_ms": None}
-        ephemeral[model_id] = result
+    if not selected:
+        ctx = _catalog_context(query, provider, free, auto_add)
+        return templates.TemplateResponse(request, "partials/catalog_results.html", ctx)
 
-        # Auto-dodaj TYLKO gdy test przeszedł pomyślnie — model, który nie
-        # przeszedł testu, w ogóle nie trafia do "W użyciu" (zostaje bez zmian).
-        if do_add and provider_row and result.get("status") == "ok":
-            model = upsert_model(provider_row["id"], model_id)
-            update_model_status(model["id"], "ok", result.get("latency_ms"), "")
+    # Testy w tle (wątki) + panel postępu z pollingiem — UI zostaje responsywne,
+    # wyniki dopisują się na bieżąco (jak w starym projekcie).
+    job_id = start_catalog_batch(selected, auto_add=(auto_add == "1"))
+    job = get_job(job_id)
+    return templates.TemplateResponse(request, "partials/batch_status.html", {"job": job})
 
-    ctx = _catalog_context(query, provider, free, auto_add, ephemeral)
-    return templates.TemplateResponse(request, "partials/catalog_results.html", ctx)
+
+@router.get("/batch/{job_id}/status", response_class=HTMLResponse)
+async def batch_status(request: Request, job_id: int):
+    job = get_job(job_id)
+    if not job:
+        return HTMLResponse('<p class="muted">Job nie istnieje (serwer mógł się zrestartować).</p>')
+    return templates.TemplateResponse(request, "partials/batch_status.html", {"job": job})
 
 
 @router.post("/catalog/hide", response_class=HTMLResponse)
@@ -121,6 +128,12 @@ async def catalog_hide(
 # ---------- Tab: W użyciu ----------
 @router.get("/used", response_class=HTMLResponse)
 async def used_tab(request: Request, query: str = "", free: str = "", sort: str = "name"):
+    # Jednorazowe uzupełnienie kontekstu dla modeli dodanych przed tą zmianą
+    # (katalog jest cache'owany 5 min, więc to tanie).
+    try:
+        backfill_context_from_catalog(fetch_catalog())
+    except Exception:
+        pass
     models = list_ai_models(query=query or None, free_only=(free == "1"), sort=sort)
     groups = group_models_by_prefix(models)
     return templates.TemplateResponse(
@@ -129,42 +142,79 @@ async def used_tab(request: Request, query: str = "", free: str = "", sort: str 
     )
 
 
-@router.post("/{model_id}/test", response_class=HTMLResponse)
-async def test_model(request: Request, model_id: int):
-    await check_single_model(model_id)
+# ---------- Tab: Ulubione ----------
+@router.get("/favorites", response_class=HTMLResponse)
+async def favorites_tab(request: Request, query: str = "", free: str = "", sort: str = "name"):
+    models = list_favorite_models(query=query or None, free_only=(free == "1"), sort=sort)
+    return templates.TemplateResponse(
+        request, "partials/favorites_results.html",
+        {"models": models, "query": query, "free": free == "1", "sort": sort},
+    )
+
+
+@router.post("/{model_id}/favorite", response_class=HTMLResponse)
+async def favorite_add(request: Request, model_id: int):
+    set_favorite(model_id, True)
     model = get_model(model_id)
     return templates.TemplateResponse(request, "partials/model_row.html", {"m": model})
 
 
+@router.post("/{model_id}/unfavorite", response_class=HTMLResponse)
+async def favorite_remove(request: Request, model_id: int, from_tab: str = ""):
+    set_favorite(model_id, False)
+    if from_tab == "fav":
+        # wiersz znika z listy ulubionych (model zostaje w użyciu)
+        return Response(status_code=200)
+    model = get_model(model_id)
+    return templates.TemplateResponse(request, "partials/model_row.html", {"m": model})
+
+
+@router.post("/favorites/test-all", response_class=HTMLResponse)
+async def favorites_test_all(request: Request):
+    job_id = start_used_batch([m["id"] for m in list_favorite_models()])
+    job = get_job(job_id)
+    return templates.TemplateResponse(request, "partials/batch_status.html", {"job": job})
+
+
+@router.post("/{model_id}/test", response_class=HTMLResponse)
+async def test_model(request: Request, model_id: int, from_tab: str = ""):
+    import asyncio
+    # Sync wywołanie w wątku roboczym — event loop zostaje wolny dla innych
+    # requestów (filtrowanie, nawigacja), a HTMX kręci spinner na przycisku.
+    def _check():
+        m = get_model(model_id)
+        if not m:
+            return
+        try:
+            result = run_prompt(m["model_id"], "Ping")
+            update_model_status(model_id, result["status"], result.get("latency_ms"), result.get("error", ""))
+        except Exception as e:
+            update_model_status(model_id, "error", None, str(e))
+
+    await asyncio.to_thread(_check)
+    model = get_model(model_id)
+    partial = "partials/fav_row.html" if from_tab == "fav" else "partials/model_row.html"
+    return templates.TemplateResponse(request, partial, {"m": model})
+
+
 @router.post("/test-all", response_class=HTMLResponse)
-async def test_all(request: Request, query: str = Form(""), free: str = Form(""), sort: str = Form("name")):
-    models = list_ai_models(query=query or None, free_only=(free == "1"), sort=sort)
-    for m in models:
-        await check_single_model(m["id"])
-    models = list_ai_models(query=query or None, free_only=(free == "1"), sort=sort)
-    groups = group_models_by_prefix(models)
-    return templates.TemplateResponse(
-        request, "partials/used_results.html",
-        {"groups": groups, "total": len(models), "query": query, "free": free == "1", "sort": sort},
-    )
+async def test_all(request: Request):
+    # Batch w tle — panel postępu zamiast zamrożonego UI
+    job_id = start_used_batch([m["id"] for m in list_ai_models()])
+    job = get_job(job_id)
+    return templates.TemplateResponse(request, "partials/batch_status.html", {"job": job})
 
 
 @router.post("/test-selected", response_class=HTMLResponse)
-async def test_selected(
-    request: Request,
-    selected: list[int] = Form(default=[]),
-    query: str = Form(""),
-    free: str = Form(""),
-    sort: str = Form("name"),
-):
-    for mid in selected:
-        await check_single_model(mid)
-    models = list_ai_models(query=query or None, free_only=(free == "1"), sort=sort)
-    groups = group_models_by_prefix(models)
-    return templates.TemplateResponse(
-        request, "partials/used_results.html",
-        {"groups": groups, "total": len(models), "query": query, "free": free == "1", "sort": sort},
-    )
+async def test_selected(request: Request, selected: list[int] = Form(default=[])):
+    if not selected:
+        return templates.TemplateResponse(request, "partials/batch_status.html",
+                                          {"job": {"id": 0, "total": 0, "done": 0, "finished": True,
+                                                   "auto_add": False, "back": "used", "results": [],
+                                                   "ok_count": 0, "err_count": 0, "elapsed_s": 0}})
+    job_id = start_used_batch(selected)
+    job = get_job(job_id)
+    return templates.TemplateResponse(request, "partials/batch_status.html", {"job": job})
 
 
 @router.post("/{model_id}/delete", response_class=HTMLResponse)

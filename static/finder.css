@@ -1,0 +1,130 @@
+/* ---------- Wyszukiwarka ---------- */
+.fd-search {
+  margin-bottom: 1rem;
+}
+.fd-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 0.75rem;
+}
+.fd-row:last-child {
+  margin-bottom: 0;
+}
+.fd-search input[type="text"] {
+  padding: 0.45rem 0.6rem;
+  background: var(--color-input-bg, #1b1b21);
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 6px;
+  color: var(--color-fg, #e8e4da);
+  font-size: 0.95rem;
+}
+.fd-query {
+  flex: 2;
+  min-width: 200px;
+}
+.fd-lang {
+  flex: 0 1 170px;
+}
+.fd-mode-desc {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+}
+.fd-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.fd-report {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  max-height: 520px;
+  overflow-y: auto;
+}
+.fd-repos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 520px;
+  overflow-y: auto;
+}
+.fd-repos li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border, #2c2c34);
+}
+.fd-repos li:last-child {
+  border-bottom: none;
+}
+.fd-repos a {
+  font-weight: 600;
+  word-break: break-all;
+}
+.fd-repos p {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.85rem;
+}
+.fd-modes .fd-mode-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-border, #2c2c34);
+}
+.fd-mode-item p {
+  margin: 0.15rem 0 0 0;
+  font-size: 0.85rem;
+}
+.fd-mode-btns {
+  display: flex;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+.fd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border, #2c2c34);
+}
+.fd-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+.fd-form input[type="text"],
+.fd-form textarea,
+.fd-form select {
+  padding: 0.45rem 0.6rem;
+  background: var(--color-input-bg, #1b1b21);
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 6px;
+  color: var(--color-fg, #e8e4da);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+.fd-form textarea {
+  resize: vertical;
+  min-height: 140px;
+  line-height: 1.5;
+}
+.fd-form code,
+.tr-info code {
+  font-size: 0.85em;
+}
+@media (max-width: 900px) {
+  .fd-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Rozdzielenie kolumn: prawa karta (repozytoria) na powierzchni
+   bg-soft — różnica jasności ~4% względem lewej karty. */
+html:not([data-theme="xp"]) .fd-grid > .card:last-child {
+  background: var(--color-bg-soft, #26262c);
+}

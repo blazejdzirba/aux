@@ -1,41 +1,4 @@
 <form id="catalog-form">
-  <div class="toolbar">
-    <input type="search" name="query" placeholder="Filtruj po nazwie modelu..." value="{{ query }}"
-           hx-get="/models/catalog" hx-trigger="keyup changed delay:400ms" hx-include="#catalog-form"
-           hx-target="#models-tabpanel" hx-swap="innerHTML">
-
-    <select name="provider" hx-get="/models/catalog" hx-trigger="change" hx-include="#catalog-form"
-            hx-target="#models-tabpanel" hx-swap="innerHTML">
-      <option value="">Providerzy ({{ providers_all|length }})</option>
-      {% for p in providers_all %}
-        <option value="{{ p }}" {% if p == provider %}selected{% endif %}>{{ p }}</option>
-      {% endfor %}
-    </select>
-
-    <label class="checkbox-label">
-      <input type="checkbox" name="free" value="1" {% if free %}checked{% endif %}
-             hx-get="/models/catalog" hx-trigger="change" hx-include="#catalog-form"
-             hx-target="#models-tabpanel" hx-swap="innerHTML">
-      FREE
-    </label>
-
-    <label class="checkbox-label" title="Testowane modele od razu trafiają do zakładki „W użyciu”">
-      <input type="checkbox" name="auto_add" value="1" {% if auto_add %}checked{% endif %}>
-      Automatycznie dodaj do używanych
-    </label>
-
-    <div class="toolbar-spacer"></div>
-
-    <button type="button" class="btn btn-primary" hx-post="/models/catalog/test" hx-include="#catalog-form"
-            hx-target="#models-tabpanel" hx-swap="innerHTML">
-      ⚡ Testuj <span id="sel-count">0</span>
-    </button>
-    <button type="button" class="btn btn-danger" hx-post="/models/catalog/hide" hx-include="#catalog-form"
-            hx-target="#models-tabpanel" hx-swap="innerHTML" hx-confirm="Ukryć zaznaczone modele z katalogu (na trwałe)?">
-      🗑 Usuń zaznaczone
-    </button>
-  </div>
-
   {% if error %}
   <div class="card" style="border-color: var(--color-danger); margin-bottom:1rem;">
     <span class="chip status-error">Błąd pobierania katalogu</span>
@@ -51,7 +14,7 @@
 
   <div id="catalog-groups">
     {% for prefix, group_models in groups.items() %}
-    <details class="model-group" open>
+    <details class="model-group" {% if query or provider or free %}open{% endif %}>
       <summary>
         <label class="checkbox-label" onclick="event.stopPropagation()">
           <input type="checkbox" onclick="const on=this.checked; this.closest('details').querySelectorAll('input[name=selected]').forEach(cb=>cb.checked=on); document.dispatchEvent(new Event('catalog-selection-changed'));">
@@ -79,8 +42,8 @@
                 {% endif %}
               {% endif %}
             </td>
-            <td class="subtle" style="text-align:right; white-space:nowrap;">
-              {{ "{:,}".format(it.context_length).replace(",", " ") if it.context_length else "—" }} tok.
+            <td class="subtle" style="text-align:right; white-space:nowrap;" title="{{ '{:,}'.format(it.context_length).replace(',', ' ') + ' tokenów' if it.context_length else 'brak danych o kontekście' }}">
+              {{ it.context_length|ctx }}
             </td>
           </tr>
           {% endfor %}
@@ -92,11 +55,3 @@
     {% endfor %}
   </div>
 </form>
-
-<script>
-  document.addEventListener('catalog-selection-changed', function () {
-    var n = document.querySelectorAll('#catalog-groups input[name="selected"]:checked').length;
-    var a = document.getElementById('sel-count'); if (a) a.textContent = n;
-    var b = document.getElementById('wybrano-count'); if (b) b.textContent = n;
-  });
-</script>

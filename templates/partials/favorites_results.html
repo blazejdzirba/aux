@@ -1,0 +1,22 @@
+<form id="fav-form">
+  {% if models %}
+  <div class="toolbar" style="margin-bottom:0.75rem;">
+    <label class="checkbox-label">
+      <input type="checkbox" onclick="const on=this.checked; document.querySelectorAll('#fav-groups input[name=selected]').forEach(cb=>cb.checked=on); document.dispatchEvent(new Event('fav-selection-changed'));">
+      Zaznacz wszystkie ({{ models|length }})
+    </label>
+  </div>
+  <div id="fav-groups">
+    <table>
+      <tbody>
+        {% for m in models %}
+          {% include "partials/fav_row.html" %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">Brak ulubionych modeli. Oznacz gwiazdką (☆) wybrane modele na liście „W użyciu", a pojawią się tutaj.</p>
+  {% endif %}
+</form>
+<div id="model-info-modal"></div>

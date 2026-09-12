@@ -1,0 +1,141 @@
+/* Szablon PDF: Ciemny / AUX Style — czerń + złoto, klimat Vibe Center.
+   Kompatybilny z WeasyPrint i xhtml2pdf (prosty CSS, bez zmiennych/flex).
+   Uwaga: ciemne tło zużywa dużo toneru przy druku — idealny do PDF-ów ekranowych. */
+
+@page {
+  size: A4;
+  margin: 20mm;
+  background: #13100a;
+}
+
+body {
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.65;
+  color: #f3ead9;
+  background: #13100a;
+}
+
+.pdf-content {
+  max-width: 100%;
+}
+
+h1 {
+  font-size: 22pt;
+  color: #d4af37;
+  border-bottom: 2pt solid #d4af37;
+  padding-bottom: 8pt;
+  margin-top: 0;
+  margin-bottom: 12pt;
+}
+
+h2 {
+  font-size: 16pt;
+  color: #e8c862;
+  margin-top: 20pt;
+  border-bottom: 1pt solid #4a3a1e;
+  padding-bottom: 4pt;
+}
+
+h3 {
+  font-size: 12pt;
+  color: #b7a781;
+  text-transform: uppercase;
+  margin-top: 14pt;
+}
+
+h4 {
+  font-size: 11pt;
+  color: #b7a781;
+}
+
+p { margin: 6pt 0; }
+
+a { color: #d4af37; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12pt 0;
+  font-size: 10pt;
+}
+
+th {
+  background: #d4af37;
+  color: #14100a;
+  padding: 8pt;
+  text-align: left;
+  font-weight: bold;
+}
+
+td {
+  padding: 7pt 8pt;
+  border: 1pt solid #4a3a1e;
+  color: #f3ead9;
+}
+
+pre {
+  background: #0d0a06;
+  color: #f3ead9;
+  border: 1pt solid #4a3a1e;
+  padding: 12pt;
+  font-size: 9pt;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+code {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9.5pt;
+  background: #2a2013;
+  color: #e8c862;
+  padding: 1pt 5pt;
+}
+
+pre code {
+  background: transparent;
+  color: #f3ead9;
+  padding: 0;
+}
+
+blockquote {
+  border-left: 3pt solid #d4af37;
+  background: #1c160d;
+  margin: 12pt 0;
+  padding: 8pt 14pt;
+  color: #b7a781;
+}
+
+.toc {
+  background: #0d0a06;
+  border: 1pt solid #4a3a1e;
+  padding: 10pt 14pt;
+  margin-bottom: 16pt;
+  font-size: 10pt;
+}
+
+.toc ul {
+  margin: 4pt 0;
+  padding-left: 18pt;
+}
+
+.toc a {
+  color: #d4af37;
+  text-decoration: none;
+}
+
+img { max-width: 100%; }
+
+hr {
+  border: none;
+  border-top: 1pt solid #4a3a1e;
+  margin: 16pt 0;
+}
+
+ul, ol {
+  margin: 6pt 0;
+  padding-left: 20pt;
+}
+
+li { margin-bottom: 3pt; }

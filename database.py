@@ -107,6 +107,18 @@ def init_db() -> None:
         is_favorite INTEGER DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS optimizer_snippets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        text TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS optimizer_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL DEFAULT ''
+    );
     """)
     # Migracje kolumn dodanych po pierwszym utworzeniu bazy
     cols = [r["name"] for r in conn.execute("PRAGMA table_info(ai_models)")]

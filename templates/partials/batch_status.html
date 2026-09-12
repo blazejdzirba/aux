@@ -1,0 +1,64 @@
+{% set pct = (job.done * 100 / job.total) | round | int if job.total else 100 %}
+<div id="batch-job-{{ job.id }}">
+
+  <div class="card" style="margin-bottom:1rem;">
+    {% if not job.finished %}
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+      <strong>⚡ Testuję modele…</strong>
+      <span class="muted">{{ job.done }} / {{ job.total }} <span class="spinner" style="margin-left:0.5rem; vertical-align:middle;"></span></span>
+    </div>
+    {% else %}
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+      <strong>✅ Test zakończony</strong>
+      <span class="muted">{{ job.elapsed_s }} s · łącznie {{ job.total }}</span>
+    </div>
+    {% endif %}
+
+    <div style="height:8px; background:var(--color-border); border-radius:4px; overflow:hidden;">
+      <div style="height:100%; width:{{ pct }}%; background:var(--color-accent); transition:width 0.4s;"></div>
+    </div>
+
+    <div style="display:flex; gap:1rem; margin-top:0.5rem; align-items:center;">
+      <span class="chip status-ok">OK: {{ job.ok_count }}</span>
+      <span class="chip status-error">błędy: {{ job.err_count }}</span>
+      {% if job.auto_add %}<span class="subtle">odpowiedziały → dodane do „W użyciu”</span>{% endif %}
+      <span class="toolbar-spacer"></span>
+      {% if job.finished %}
+        {% if job.back == 'used' %}
+        <button type="button" class="btn btn-primary" hx-get="/models/used" hx-target="#models-tabpanel" hx-swap="innerHTML">← Wróć do listy</button>
+        {% else %}
+        <button type="button" class="btn btn-primary" hx-get="/models/catalog" hx-target="#models-tabpanel" hx-swap="innerHTML">← Wróć do katalogu</button>
+        <button type="button" class="btn" hx-get="/models/used" hx-target="#models-tabpanel" hx-swap="innerHTML">Pokaż „W użyciu”</button>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if job.results %}
+  <div class="card">
+    <table style="width:100%;">
+      <tbody>
+      {% for r in job.results %}
+        <tr>
+          <td class="mono truncate" title="{{ r.model_id }}">{{ r.model_id }}</td>
+          <td style="text-align:right; white-space:nowrap;">
+            {% if r.status == 'ok' %}
+              <span class="chip status-ok">ok · {{ r.latency_ms }} ms</span>
+            {% else %}
+              <span class="chip status-error" title="{{ r.error }}">błąd</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if not job.finished %}
+    <p class="subtle" style="margin:0.5rem 0 0;">…wyniki dopisują się na bieżąco</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if not job.finished %}
+  <div hx-get="/models/batch/{{ job.id }}/status" hx-trigger="every 1.5s" hx-target="#batch-job-{{ job.id }}" hx-swap="outerHTML"></div>
+  {% endif %}
+</div>

@@ -1,0 +1,14 @@
+{% from "partials/icons.html" import icon %}
+{# Elegancki pusty stan: stonowana ikona, tytuł, opis, przycisk CTA (blok caller()).
+   Użycie:
+   {% call empty_state('folder', 'Brak projektów', 'Opis...') %}
+     <button class="btn btn-primary">CTA</button>
+   {% endcall %} #}
+{% macro empty_state(icon_name, title, text) -%}
+<div class="pj-empty">
+  <div class="pj-empty-icon">{{ icon(icon_name) }}</div>
+  <h2 class="pj-empty-title">{{ title }}</h2>
+  <p class="pj-empty-text">{{ text }}</p>
+  <div class="pj-empty-action">{{ caller() }}</div>
+</div>
+{%- endmacro %}

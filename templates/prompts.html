@@ -4,7 +4,7 @@
 <h1>📝 Zapisane prompty</h1>
 <p class="muted" style="margin-top:-0.5rem;">Znaleziono: {{ prompts|length }}</p>
 
-<div id="prompts-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:1rem;">
+<div id="prompts-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:1rem;">
   {% for p in prompts %}
     {% include "partials/prompt_card.html" %}
   {% else %}

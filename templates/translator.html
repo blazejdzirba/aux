@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+{% block title %}Translator — Vibe Center{% endblock %}
+{% block content %}
+<div class="pj-page" x-data="translatorApp()" x-init="init()">
+  <div class="pj-head">
+    <div>
+      <h1 class="pj-title">Translator</h1>
+      <p class="pj-sub muted">Tłumaczenie 1:1 — długie teksty tłumaczone są na części.</p>
+    </div>
+  </div>
+
+  <div class="card tr-controls">
+    <div class="tabs tr-dir" role="tablist" aria-label="Kierunek tłumaczenia">
+      <button type="button" role="tab" class="tab-btn" :class="dir === 'pl-en' && 'active'" @click="setDir('pl-en')" :disabled="busy">PL → EN</button>
+      <button type="button" class="tab-btn tr-swap" @click="swap()" :disabled="busy" title="Zamień kierunek i teksty">⇄</button>
+      <button type="button" role="tab" class="tab-btn" :class="dir === 'en-pl' && 'active'" @click="setDir('en-pl')" :disabled="busy">EN → PL</button>
+    </div>
+    <label class="tr-model">
+      <span class="subtle">Model</span>
+      <select x-model="modelId" x-ref="modelSel" @change="savePrefs()" :disabled="busy">
+        {% for m in models %}
+        <option value="{{ m.model_id }}">{{ m.display_name or m.model_id }}{% if m.is_free %} · free{% endif %}</option>
+        {% else %}
+        <option value="" disabled selected>Brak modeli — sprawdź endpoint i klucz w Ustawieniach</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="tr-model" title="Ile części naraz (szybciej, ale większe obciążenie)">
+      <span class="subtle">Równolegle</span>
+      <select x-model.number="par" @change="savePrefs()" :disabled="busy" style="min-width:0;">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select>
+    </label>
+    <button type="button" class="btn btn-primary" @click="translate()" :disabled="busy || !source.trim() || !modelId">
+      <span x-show="!busy">🌐 Tłumacz</span><span x-show="busy">Tłumaczenie…</span>
+    </button>
+  </div>
+  <p class="muted tr-info" x-show="isReasoning()" style="display:none;">Uwaga: model reasoning jest wolny i może doklejać „myślenie" do wyniku — do tłumaczeń lepszy zwykły model.</p>
+
+  <div class="tr-progress-row" x-show="busy && total > 1" style="display:none;">
+    <div class="tr-progress-track"><div class="tr-progress-bar" :style="'width:' + pct() + '%'"></div></div>
+    <span class="tr-progress-label" x-text="done + '/' + total"></span>
+    <button type="button" class="btn btn-ghost" @click="cancel()">Anuluj</button>
+  </div>
+  <div class="tr-progress-row" x-show="failedAt !== null && !busy" style="display:none;">
+    <button type="button" class="btn btn-primary" @click="resume()">Kontynuuj od części <span x-text="failedAt + 1"></span></button>
+    <span class="muted" style="font-size:0.85rem;">Zachowane części: <span x-text="done"></span>/<span x-text="total"></span> — nic nie przepada.</span>
+  </div>
+  <p class="muted tr-info" x-show="doneInfo" x-text="doneInfo" style="display:none;"></p>
+  <div class="tr-warnings" x-show="warnings.length && !busy" style="display:none;">
+    <p class="muted">⚠ Podejrzane części — model mógł coś pominąć lub urwać:</p>
+    <ul>
+      <template x-for="w in warnings" :key="w.idx">
+        <li>
+          <span x-text="w.msg"></span>
+          <button type="button" class="btn btn-ghost" @click="retranslate(w.idx)" :disabled="busy">🔁 Ponów część</button>
+        </li>
+      </template>
+    </ul>
+  </div>
+
+  <div class="tr-panes">
+    <div class="card tr-pane">
+      <div class="tr-pane-head">
+        <strong x-text="langName(srcLang())"></strong>
+        <span class="muted" x-text="srcCount()"></span>
+      </div>
+      <textarea x-model="source" rows="6" placeholder="Wklej tekst do przetłumaczenia… (Ctrl+Enter = tłumacz)"
+                @input="scheduleCount()" @keydown.ctrl.enter.window="translate()" :disabled="busy"></textarea>
+    </div>
+    <div class="card tr-pane">
+      <div class="tr-pane-head">
+        <strong x-text="langName(dstLang())"></strong>
+        <span class="tr-target-meta">
+          <span class="muted" x-text="dstCount()"></span>
+          <button type="button" class="btn btn-ghost" @click="copy()" :disabled="!target">📋 Kopiuj</button>
+        </span>
+      </div>
+      <textarea x-model="target" rows="6" readonly placeholder="Tu pojawi się tłumaczenie…"></textarea>
+    </div>
+  </div>
+
+  <div class="status-error" x-show="error" x-text="error" style="display:none; margin-top:1rem;"></div>
+</div>
+<script>
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+function splitChunks(text, limit) {
+  var paras = text.split(/\n{2,}/);
+  var chunks = [], cur = "";
+  for (var i = 0; i < paras.length; i++) {
+    var p = paras[i];
+    if (!cur || (cur + "\n\n" + p).length <= limit) { cur = cur ? cur + "\n\n" + p : p; }
+    else { chunks.push(cur); cur = p; }
+  }
+  if (cur) chunks.push(cur);
+  var out = [];
+  for (var j = 0; j < chunks.length; j++) {
+    var c = chunks[j];
+    while (c.length > limit) {
+      var cut = -1;
+      var marks = [". ", "? ", "! ", ".\n", "?\n", "!\n"];
+      for (var k = 0; k < marks.length; k++) {
+        var idx = c.lastIndexOf(marks[k], limit - 2);
+        if (idx > cut) cut = idx;
+      }
+      if (cut < limit * 0.3) { cut = limit; out.push(c.slice(0, cut).trim()); c = c.slice(cut).trim(); }
+      else { out.push(c.slice(0, cut + 1).trim()); c = c.slice(cut + 1).trim(); }
+    }
+    if (c) out.push(c);
+  }
+  return out;
+}
+function translatorApp() {
+  return {
+    dir: 'pl-en',
+    modelId: '',
+    par: 2,
+    source: '',
+    target: '',
+    busy: false,
+    error: '',
+    doneInfo: '',
+    total: 1,
+    done: 0,
+    chunks: [],
+    parts: [],
+    failedAt: null,
+    warnings: [],
+    totalMs: 0,
+    ctl: null,
+    srcTok: null,
+    srcEst: false,
+    dstTok: null,
+    dstEst: false,
+    countTimer: null,
+    init() {
+      try {
+        var d = localStorage.getItem('tr-dir');
+        if (d === 'pl-en' || d === 'en-pl') this.dir = d;
+        var s = localStorage.getItem('tr-model');
+        var opts = this.$refs.modelSel ? Array.prototype.map.call(this.$refs.modelSel.options, function (o) { return o.value; }) : [];
+        if (s && opts.indexOf(s) !== -1) this.modelId = s;
+        else if (opts.length) this.modelId = opts[0];
+        var p = parseInt(localStorage.getItem('tr-par') || '2', 10);
+        if (p >= 1 && p <= 3) this.par = p;
+      } catch (e) {}
+    },
+    savePrefs() {
+      try {
+        localStorage.setItem('tr-dir', this.dir);
+        localStorage.setItem('tr-model', this.modelId);
+        localStorage.setItem('tr-par', String(this.par));
+      } catch (e) {}
+    },
+    srcLang() { return this.dir.split('-')[0]; },
+    dstLang() { return this.dir.split('-')[1]; },
+    langName(code) { return code === 'pl' ? 'Polski' : 'Angielski'; },
+    isReasoning() {
+      var m = (this.modelId || '').toLowerCase();
+      return m.indexOf('reasoning') !== -1 || m.indexOf('thinking') !== -1 || m.indexOf('reasoner') !== -1;
+    },
+    setDir(d) { this.dir = d; this.savePrefs(); },
+    swap() {
+      var t = this.source; this.source = this.target; this.target = t;
+      var n = this.srcTok; this.srcTok = this.dstTok; this.dstTok = n;
+      var e = this.srcEst; this.srcEst = this.dstEst; this.dstEst = e;
+      this.dir = this.dir === 'pl-en' ? 'en-pl' : 'pl-en';
+      this.savePrefs();
+    },
+    pct() { return this.total > 0 ? Math.round(this.done / this.total * 100) : 0; },
+    fmtTok(n, est) {
+      if (n === null || n === undefined) return '—';
+      return (est ? '≈' : '') + n.toLocaleString('pl-PL');
+    },
+    srcCount() { return this.source.length + ' znaków · ' + this.fmtTok(this.srcTok, this.srcEst) + ' tok'; },
+    dstCount() { return this.target.length + ' znaków · ' + this.fmtTok(this.dstTok, this.dstEst) + ' tok'; },
+    scheduleCount() {
+      var self = this;
+      if (self.countTimer) clearTimeout(self.countTimer);
+      self.countTimer = setTimeout(function () { self.updateCounts(); }, 400);
+    },
+    async countOne(text) {
+      if (!text) return {tokens: 0, estimated: false};
+      try {
+        var res = await fetch('/translator/count', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({text: text})
+        });
+        return await res.json();
+      } catch (e) { return {tokens: null, estimated: false}; }
+    },
+    async updateCounts() {
+      var s = await this.countOne(this.source);
+      this.srcTok = s.tokens; this.srcEst = !!s.estimated;
+      var d = await this.countOne(this.target);
+      this.dstTok = d.tokens; this.dstEst = !!d.estimated;
+    },
+    cancel() {
+      if (this.ctl) { try { this.ctl.abort(); } catch (e) {} }
+    },
+    shownText() {
+      var k = 0;
+      while (k < this.parts.length && this.parts[k] !== null && this.parts[k] !== undefined) k++;
+      return this.parts.slice(0, k).join('\n\n');
+    },
+    async callTranslate(text, strict) {
+      var res = await fetch('/translator/translate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        signal: this.ctl.signal,
+        body: JSON.stringify({text: text, direction: this.dir, model_id: this.modelId, strict: !!strict})
+      });
+      return await res.json();
+    },
+    checkChunk(idx, inLen, data) {
+      var out = (data.translation || '').length;
+      if (data.finish_reason === 'length') {
+        return {idx: idx, kind: 'trunc', msg: 'Część ' + (idx + 1) + ': model urwał odpowiedź w połowie (' + out + ' z ' + inLen + ' znaków).'};
+      }
+      if (inLen > 500 && out < inLen * 0.3) {
+        return {idx: idx, kind: 'short', msg: 'Część ' + (idx + 1) + ': wynik podejrzanie krótki (' + out + ' z ' + inLen + ' znaków).'};
+      }
+      return null;
+    },
+    async translateChunk(text, idx) {
+      var attempts = 0, lastErr = 'Błąd', data = null;
+      while (attempts < 3) {
+        try {
+          data = await this.callTranslate(text, false);
+          if (data.status === 'ok' && (data.translation || '').trim()) break;
+          lastErr = (data && data.error) || 'Pusta odpowiedź modelu';
+          data = null;
+        } catch (e) {
+          if (e && e.name === 'AbortError') throw e;
+          lastErr = (e && e.message) || 'Błąd połączenia';
+          data = null;
+        }
+        attempts++;
+        if (attempts < 3) await sleep(1500 * attempts);
+      }
+      if (!data) throw new Error(lastErr);
+      var warn = this.checkChunk(idx, text.length, data);
+      if (warn) {
+        try {
+          var retry = await this.callTranslate(text, true);
+          if (retry.status === 'ok' && (retry.translation || '').trim()) {
+            var warn2 = this.checkChunk(idx, text.length, retry);
+            if (!warn2) return {text: retry.translation, ms: (data.latency_ms || 0) + (retry.latency_ms || 0), warn: null};
+            data = retry;
+            warn = warn2;
+          }
+        } catch (e) {
+          if (e && e.name === 'AbortError') throw e;
+        }
+      }
+      return {text: data.translation || '', ms: data.latency_ms || 0, warn: warn};
+    },
+    async runPool() {
+      var self = this;
+      var pending = [];
+      for (var i = 0; i < self.chunks.length; i++) {
+        if (self.parts[i] === null || self.parts[i] === undefined) pending.push(i);
+      }
+      var next = 0, stopped = false, fatal = null;
+      async function worker() {
+        while (next < pending.length && !stopped) {
+          if (self.ctl.signal.aborted) return;
+          var idx = pending[next++];
+          try {
+            var r = await self.translateChunk(self.chunks[idx], idx);
+            self.parts[idx] = r.text;
+            self.totalMs += r.ms;
+            if (r.warn) self.warnings.push(r.warn);
+            self.done++;
+            self.target = self.shownText();
+            self.updateCounts();
+          } catch (e) {
+            if (e && e.name === 'AbortError') { stopped = true; return; }
+            stopped = true;
+            fatal = {idx: idx, msg: (e && e.message) || 'Błąd'};
+            return;
+          }
+        }
+      }
+      var workers = [];
+      var n = Math.min(self.par, pending.length);
+      for (var w = 0; w < n; w++) workers.push(worker());
+      await Promise.all(workers);
+      return fatal;
+    },
+    async translate() {
+      if (this.busy || !this.source.trim() || !this.modelId) return;
+      this.busy = true; this.error = ''; this.doneInfo = ''; this.target = '';
+      this.dstTok = null; this.totalMs = 0;
+      var text = this.source;
+      this.chunks = text.length > 6000 ? splitChunks(text, 4000) : [text];
+      this.parts = [];
+      for (var i = 0; i < this.chunks.length; i++) this.parts.push(null);
+      this.total = this.chunks.length; this.done = 0; this.failedAt = null; this.warnings = [];
+      this.ctl = new AbortController();
+      var fatal = await this.runPool();
+      this.finishRun(fatal);
+    },
+    async resume() {
+      if (this.busy || this.failedAt === null) return;
+      this.busy = true; this.error = ''; this.doneInfo = '';
+      this.ctl = new AbortController();
+      var fatal = await this.runPool();
+      this.finishRun(fatal);
+    },
+    finishRun(fatal) {
+      var cancelled = this.ctl && this.ctl.signal.aborted;
+      this.busy = false;
+      this.ctl = null;
+      if (!fatal && !cancelled) {
+        this.target = this.parts.join('\n\n');
+        this.failedAt = null;
+        var s = (this.totalMs / 1000).toFixed(1) + ' s';
+        this.doneInfo = this.total > 1
+          ? 'Przetłumaczono ' + this.total + ' części w ' + s + ' · ' + this.modelId
+          : 'Przetłumaczono w ' + s + ' · ' + this.modelId;
+        if (this.warnings.length) {
+          var nums = this.warnings.map(function (w) { return w.idx + 1; }).join(', ');
+          this.doneInfo += ' · ⚠ podejrzane części: ' + nums;
+        }
+      } else if (cancelled && !fatal) {
+        var first = 0;
+        while (first < this.parts.length && this.parts[first] !== null && this.parts[first] !== undefined) first++;
+        this.failedAt = first < this.total ? first : null;
+        this.error = 'Anulowano. Zachowano ' + this.done + '/' + this.total + ' części.';
+      } else if (fatal) {
+        this.failedAt = fatal.idx;
+        this.error = 'Część ' + (fatal.idx + 1) + '/' + this.total + ' nie przeszła (3 próby): ' + fatal.msg
+          + ' Zachowano ' + this.done + ' części.';
+      }
+      this.updateCounts();
+    },
+    async retranslate(idx) {
+      if (this.busy || !this.chunks[idx]) return;
+      this.busy = true; this.error = '';
+      this.ctl = new AbortController();
+      try {
+        var r = await this.translateChunk(this.chunks[idx], idx);
+        this.parts[idx] = r.text;
+        this.target = this.parts.join('\n\n');
+        this.warnings = this.warnings.filter(function (w) { return w.idx !== idx; });
+        if (r.warn) this.warnings.push(r.warn);
+        else this.doneInfo = 'Część ' + (idx + 1) + ' przetłumaczona ponownie.';
+        this.updateCounts();
+      } catch (e) {
+        if (e && e.name === 'AbortError') this.error = 'Anulowano.';
+        else this.error = 'Część ' + (idx + 1) + ': ' + ((e && e.message) || 'Błąd');
+      }
+      this.busy = false; this.ctl = null;
+    },
+    async copy() {
+      if (!this.target) return;
+      try {
+        await navigator.clipboard.writeText(this.target);
+        this.doneInfo = 'Skopiowano do schowka.';
+      } catch (e) {
+        this.error = 'Kopiowanie nieudane — zaznacz tekst ręcznie.';
+      }
+    }
+  };
+}
+</script>
+{% endblock %}

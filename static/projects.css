@@ -1,0 +1,503 @@
+/* ============================================================
+   Vibe Center — moduł Projekty (Krok 1: lista + pusty stan).
+   Standard: ikony SVG (.ic), oddech, jaśniejsze inputy + złoty focus.
+   Klasy .pj-* (dark-first, jasny XP w theme-xp.css).
+   Zmienne ze stylów globalnych z bezpiecznymi fallbackami.
+   ============================================================ */
+
+/* ---------- Ikony SVG (styl Lucide) ---------- */
+.ic {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.18em;
+  flex-shrink: 0;
+}
+.sidebar .nav-item svg.ic {
+  width: 1.2em;
+  height: 1.2em;
+  margin-right: 0.1em;
+}
+
+/* ---------- Układ strony ---------- */
+.pj-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+.pj-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.pj-title {
+  margin: 0;
+  font-size: 1.6rem;
+}
+.pj-sub {
+  margin: 0.25rem 0 0;
+}
+.pj-back {
+  margin-bottom: 1rem;
+}
+
+/* ---------- Siatka kart ---------- */
+.pj-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+.pj-card {
+  background: var(--color-bg-elevated, #1b1b1f);
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: border-color 0.15s ease;
+}
+.pj-card:hover {
+  border-color: var(--color-accent, #d4af37);
+}
+.pj-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.pj-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--color-fg, #f2f0ea);
+  text-decoration: none;
+}
+.pj-card-title:hover {
+  color: var(--color-accent, #d4af37);
+}
+.pj-card-ico {
+  display: inline-flex;
+  color: var(--color-accent, #d4af37);
+}
+.pj-card-ico .ic {
+  width: 1.4em;
+  height: 1.4em;
+}
+.pj-card-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pj-card-desc {
+  margin: 0;
+  min-height: 2.6em;
+  font-size: 0.92rem;
+  color: var(--color-fg-muted, #b9b4a8);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pj-card-desc-empty {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+/* ---------- Pille z licznikami ---------- */
+.pj-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pj-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--color-bg-soft, #26262c);
+  border: 1px solid var(--color-border, #2c2c34);
+  color: var(--color-fg-muted, #b9b4a8);
+  white-space: nowrap;
+}
+
+/* ---------- Stopka karty ---------- */
+.pj-card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--color-border, #2c2c34);
+  font-size: 0.82rem;
+  color: var(--color-fg-subtle, #8a8578);
+}
+.pj-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.pj-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  color: var(--color-accent, #d4af37);
+  text-decoration: none;
+}
+.pj-open:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Przycisk ikonowy + menu kontekstowe ---------- */
+.pj-icon-btn {
+  display: inline-flex;
+  padding: 0.3rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--color-fg-muted, #b9b4a8);
+  cursor: pointer;
+}
+.pj-icon-btn:hover {
+  background: var(--color-bg-soft, #26262c);
+  color: var(--color-fg, #f2f0ea);
+}
+.pj-menu-wrap {
+  position: relative;
+}
+.pj-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 150px;
+  padding: 0.35rem;
+  background: var(--color-bg-elevated, #1b1b1f);
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 50;
+}
+.pj-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  text-align: left;
+  color: var(--color-fg, #f2f0ea);
+  cursor: pointer;
+}
+.pj-menu-item:hover {
+  background: var(--color-bg-soft, #26262c);
+}
+.pj-menu-item.pj-danger {
+  color: #e5484d;
+}
+.pj-menu-item.pj-danger:hover {
+  background: rgba(229, 72, 77, 0.12);
+}
+
+/* ---------- Formularze: nowy standard ---------- */
+.pj-field {
+  display: block;
+  margin-bottom: 1rem;
+}
+.pj-field > span {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.pj-field em {
+  font-style: normal;
+  font-weight: 400;
+  opacity: 0.6;
+}
+.pj-field input[type="text"],
+.pj-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--color-fg, #f2f0ea);
+  background: var(--color-bg-input, #26262c);
+  border: 1px solid var(--color-border-strong, #3a3a44);
+  border-radius: 8px;
+}
+.pj-field input[type="text"]:focus,
+.pj-field textarea:focus {
+  outline: none;
+  border-color: var(--color-accent, #d4af37);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25);
+}
+
+/* ---------- Modale (karta z globalnego .modal-card) ---------- */
+.pj-modal {
+  width: min(520px, 92vw);
+}
+.pj-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.pj-modal-head h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+.pj-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+/* ---------- Pusty stan ---------- */
+.pj-empty {
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+  border: 1px dashed var(--color-border-strong, #3a3a44);
+  border-radius: 12px;
+}
+.pj-empty-icon {
+  color: var(--color-fg-subtle, #8a8578);
+  opacity: 0.7;
+}
+.pj-empty-icon .ic {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+.pj-empty-title {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.25rem;
+}
+.pj-empty-text {
+  margin: 0 auto 1.5rem;
+  max-width: 420px;
+  color: var(--color-fg-muted, #b9b4a8);
+}
+
+/* ---------- Detal projektu: zakładki (Krok 2) ---------- */
+.pj-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+}
+.pj-tabs .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.pj-tabbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.pj-tabhint {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ---------- Detal projektu: wiersze elementów ---------- */
+.pj-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.pj-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  background: var(--color-bg-elevated, #1b1b1f);
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 10px;
+}
+.pj-row-main {
+  display: flex;
+  gap: 0.8rem;
+  min-width: 0;
+  flex: 1 1 300px;
+}
+.pj-row-ico {
+  display: inline-flex;
+  padding-top: 0.15rem;
+  color: var(--color-accent, #d4af37);
+}
+.pj-row-ico .ic {
+  width: 1.3em;
+  height: 1.3em;
+}
+.pj-row-body {
+  min-width: 0;
+}
+.pj-row-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pj-row-excerpt {
+  font-size: 0.88rem;
+  color: var(--color-fg-muted, #b9b4a8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pj-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--color-fg-subtle, #8a8578);
+}
+.pj-mini-badge {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--color-bg-soft, #26262c);
+  border: 1px solid var(--color-border, #3a3a44);
+  color: var(--color-fg-muted, #b9b4a8);
+}
+.pj-row-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.pj-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-strong, #3a3a44);
+  background: transparent;
+  color: var(--color-fg, #f2f0ea);
+  cursor: pointer;
+  text-decoration: none;
+  font-family: inherit;
+}
+.pj-btn-sm:hover {
+  background: var(--color-bg-soft, #26262c);
+  border-color: var(--color-accent, #d4af37);
+  color: var(--color-fg, #f2f0ea);
+}
+.pj-btn-sm.pj-danger-text {
+  color: #e5484d;
+}
+.pj-btn-sm.pj-danger-text:hover {
+  background: rgba(229, 72, 77, 0.12);
+  border-color: #e5484d;
+  color: #e5484d;
+}
+.pj-hidden {
+  display: none;
+}
+
+/* ---------- Select w formularzach (tryb promptu) ---------- */
+.pj-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--color-fg, #f2f0ea);
+  background: var(--color-bg-input, #26262c);
+  border: 1px solid var(--color-border-strong, #3a3a44);
+  border-radius: 8px;
+}
+.pj-field select:focus {
+  outline: none;
+  border-color: var(--color-accent, #d4af37);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25);
+}
+
+/* ---------- Drzewo projektu (Krok 3) ---------- */
+.pj-tree-rootform {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+.pj-tree-rootform .pj-field {
+  flex: 1;
+  margin-bottom: 0;
+}
+.pj-flash-ok {
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(80, 200, 120, 0.4);
+  background: rgba(80, 200, 120, 0.08);
+  border-radius: 8px;
+}
+.pj-tree-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+.pj-tree-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.pj-tree-card {
+  padding: 1rem 1.25rem;
+}
+.pj-tree-pre {
+  max-height: 520px;
+  overflow: auto;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  padding: 0.75rem;
+  background: #141417;
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 8px;
+  white-space: pre;
+}
+.pj-tuned {
+  max-height: 300px;
+}
+.pj-tree-btnrow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.6rem 0;
+}
+.pj-tree-tune {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin: 0.6rem 0;
+}
+.pj-tree-tune .pj-field {
+  flex: 1;
+  margin-bottom: 0;
+}
+@media (max-width: 900px) {
+  .pj-tree-grid {
+    grid-template-columns: 1fr;
+  }
+}

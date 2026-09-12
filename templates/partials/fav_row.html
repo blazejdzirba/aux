@@ -1,0 +1,39 @@
+<tr id="model-{{ m.id }}">
+  <td style="width:2rem;">
+    <input type="checkbox" name="selected" value="{{ m.id }}"
+           onchange="document.dispatchEvent(new Event('fav-selection-changed'))">
+  </td>
+  <td class="mono truncate" title="{{ m.model_id }}">
+    {{ m.model_id }}
+    {% if m.is_free %}<span class="chip" style="margin-left:0.4rem;">FREE</span>{% endif %}
+  </td>
+  <td class="subtle" style="text-align:right; white-space:nowrap;" title="{{ '{:,}'.format(m.context_length).replace(',', ' ') + ' tokenów' if m.context_length else 'brak danych o kontekście' }}">
+    {{ m.context_length|ctx }}
+  </td>
+  <td style="white-space:nowrap;">
+    {% if m.last_status == 'ok' %}
+      <span class="status-ok">{{ m.last_latency_ms }} ms</span>
+    {% elif m.last_status == 'error' %}
+      <span class="chip status-error" title="{{ m.last_error }}">Błąd</span>
+    {% else %}
+      <span class="subtle">—</span>
+    {% endif %}
+  </td>
+  <td class="subtle" style="white-space:nowrap;">🕐 {{ m.last_checked_at[11:16] if m.last_checked_at else '—' }}</td>
+  <td class="row-actions" style="white-space:nowrap;">
+    <a class="icon-btn" title="Otwórz w Playground" href="/playground?model={{ m.model_id | urlencode }}"
+       style="text-decoration:none; display:inline-block;">▶️</a>
+    <button type="button" class="icon-btn" id="test-btn-{{ m.id }}" title="Testuj ponownie"
+            hx-post="/models/{{ m.id }}/test?from_tab=fav" hx-target="#model-{{ m.id }}" hx-swap="outerHTML"
+            hx-indicator="#spinner-{{ m.id }}">
+      <span id="spinner-{{ m.id }}" class="spinner htmx-indicator"></span>
+      <span class="htmx-indicator-hide">⚡</span>
+    </button>
+    <button type="button" class="icon-btn" title="Notatki / tagi"
+            hx-get="/models/{{ m.id }}/info" hx-target="#model-info-modal" hx-swap="innerHTML">ℹ️</button>
+    <button type="button" class="icon-btn" title="Usuń z ulubionych (model zostaje w użyciu)"
+            hx-post="/models/{{ m.id }}/unfavorite?from_tab=fav"
+            hx-target="#model-{{ m.id }}" hx-swap="outerHTML"
+            style="color:#FFC73C;">⭐</button>
+  </td>
+</tr>

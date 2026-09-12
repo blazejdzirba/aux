@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% block title %}Konwerter — Vibe Center{% endblock %}
+{% block content %}
+<form class="converter-page"
+      hx-post="/converter/md-to-pdf"
+      hx-target="#converter-result"
+      hx-swap="innerHTML"
+      hx-encoding="multipart/form-data"
+      hx-indicator="#converter-spinner"
+      x-data="converterApp()"
+      x-cloak>
+
+  <!-- ================= LEWY PANEL: USTAWIENIA I ŹRÓDŁO ================= -->
+  <div class="converter-settings card">
+    <h2 style="margin:0;">🔄 Konwerter MD → PDF</h2>
+    <p class="muted" style="margin:0; font-size:0.85rem;">Zamień Markdown na profesjonalny dokument PDF.</p>
+
+    <!-- Źródło -->
+    <div>
+      <strong>Źródło</strong>
+      <div class="source-tabs" style="margin-top:0.4rem;">
+        <button type="button" class="tab-btn" :class="sourceTab === 'file' ? 'active' : ''" @click="setTab('file')">📤 Plik .md</button>
+        <button type="button" class="tab-btn" :class="sourceTab === 'documents' ? 'active' : ''" @click="setTab('documents')">📄 Dokumenty AUX</button>
+        <button type="button" class="tab-btn" :class="sourceTab === 'text' ? 'active' : ''" @click="setTab('text')">✏️ Tekst</button>
+      </div>
+
+      <!-- Plik: drag & drop -->
+      <div x-show="sourceTab === 'file'" style="margin-top:0.6rem;">
+        <div class="dropzone"
+             @click="$refs.fileInput.click()"
+             @dragover.prevent="dragOver = true"
+             @dragleave.prevent="dragOver = false"
+             @drop.prevent="handleDrop($event)"
+             :class="dragOver ? 'drag-over' : ''">
+          <input type="file" name="md_file" accept=".md,.markdown,.txt,.text"
+                 x-ref="fileInput" @change="handleFileSelect($event)" style="display:none;">
+          <div style="font-size:1.6rem;">📥</div>
+          <p style="margin:0.3rem 0;" x-text="fileName ? '📄 ' + fileName : 'Przeciągnij plik .md tutaj lub kliknij'"></p>
+          <span class="subtle" style="font-size:0.8rem;" x-show="!fileName">formaty: .md, .markdown, .txt</span>
+          <div x-show="fileName" style="margin-top:0.5rem;">
+            <button type="button" class="btn btn-ghost" @click.stop="clearFile()">✕ Usuń plik</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dokumenty AUX -->
+      <div x-show="sourceTab === 'documents'" style="display:none; margin-top:0.6rem;">
+        <label for="conv-doc">Wybierz dokument z bazy AUX</label>
+        <div style="display:flex; gap:0.5rem;">
+          <select id="conv-doc" x-model="selectedDocId" style="flex:1;">
+            <option value="">— wybierz dokument —</option>
+            {% for d in docs %}
+            <option value="{{ d.id }}">{{ d.title }}</option>
+            {% else %}
+            <option value="" disabled>Brak dokumentów w bazie</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="btn" @click="loadDocument()" :disabled="!selectedDocId || docLoading">
+            <span x-text="docLoading ? '…' : 'Wczytaj'"></span>
+          </button>
+        </div>
+        <p class="subtle" style="font-size:0.8rem; margin:0.4rem 0 0;" x-show="loadedDocTitle" x-cloak>
+          Wczytano: <strong x-text="loadedDocTitle"></strong> — treść trafi do konwersji (podgląd w zakładce Tekst).
+        </p>
+      </div>
+
+      <!-- Wklejony tekst (textarea ZAWSZE w DOM — backend bierze plik albo ten tekst) -->
+      <div x-show="sourceTab === 'text'" style="display:none; margin-top:0.6rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label for="conv-text" style="margin:0;">Treść Markdown</label>
+          <span class="subtle" style="font-size:0.78rem;" x-text="sourceText.length + ' znaków'"></span>
+        </div>
+        <textarea id="conv-text" name="source_text" rows="10" x-model="sourceText"
+                  placeholder="# Tytuł dokumentu&#10;&#10;Treść w **Markdown**..."></textarea>
+        <div style="display:flex; gap:0.5rem; margin-top:0.4rem; flex-wrap:wrap;">
+          <button type="button" class="btn btn-ghost" @click="enrichPreview()" :disabled="!sourceText.trim() || aiBusy">
+            <span x-text="aiBusy ? '⏳ AI pracuje…' : '✨ Wzbogać przez AI (podgląd)'"></span>
+          </button>
+          <button type="button" class="btn btn-ghost" @click="sourceText = ''">🧹 Wyczyść</button>
+        </div>
+      </div>
+      <!-- Ukryty textarea-duplikat NIE jest potrzebny: powyższy textarea wysyła się zawsze,
+           nawet gdy zakładka jest schowana (x-show = display:none, pole nadal w formularzu). -->
+    </div>
+
+    <!-- Tytuł -->
+    <div>
+      <label for="conv-title">Tytuł dokumentu (opcjonalnie)</label>
+      <input id="conv-title" type="text" name="doc_title" placeholder="np. Raport Q3 — inaczej: pierwsze H1" autocomplete="off">
+    </div>
+
+    <!-- Szablon -->
+    <div>
+      <strong>Szablon PDF</strong>
+      <div class="template-grid" style="margin-top:0.4rem;">
+        <label class="template-card tpl-business">
+          <input type="radio" name="template" value="business" checked>
+          <span class="tpl-name">Elegancki Biznesowy</span>
+          <span class="tpl-sample">Aa — serif, granat</span>
+        </label>
+        <label class="template-card tpl-tech">
+          <input type="radio" name="template" value="tech">
+          <span class="tpl-name">Nowoczesny / Tech</span>
+          <span class="tpl-sample">Aa — sans, błękit</span>
+        </label>
+        <label class="template-card tpl-minimal">
+          <input type="radio" name="template" value="minimal">
+          <span class="tpl-name">Minimalistyczny</span>
+          <span class="tpl-sample">Aa — czysto, dużo światła</span>
+        </label>
+        <label class="template-card tpl-dark">
+          <input type="radio" name="template" value="dark">
+          <span class="tpl-name">Ciemny / AUX Style</span>
+          <span class="tpl-sample">Aa — czerń + złoto</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Formatowanie -->
+    <div>
+      <strong>Formatowanie strony</strong>
+      <div style="display:flex; gap:0.5rem; margin-top:0.4rem; flex-wrap:wrap;">
+        <div style="flex:1; min-width:140px;">
+          <label for="conv-margins">Marginesy</label>
+          <select id="conv-margins" name="margins">
+            <option value="narrow">Wąskie (12 mm)</option>
+            <option value="normal" selected>Normalne (20 mm)</option>
+            <option value="wide">Szerokie (30 mm)</option>
+          </select>
+        </div>
+        <div style="flex:1; min-width:120px;">
+          <label for="conv-size">Rozmiar</label>
+          <select id="conv-size" name="page_size">
+            <option value="A4" selected>A4</option>
+            <option value="Letter">Letter</option>
+          </select>
+        </div>
+      </div>
+      <label class="checkbox-label" style="margin-top:0.5rem;">
+        <input type="checkbox" name="page_numbers" value="1" checked> Numeracja stron w stopce
+      </label>
+    </div>
+
+    <!-- AI -->
+    <div class="ai-box">
+      <label class="checkbox-label" style="font-size:0.92rem;">
+        <input type="checkbox" name="ai_enrich" value="1"
+               :checked="aiEnabled" @change="aiEnabled = $event.target.checked">
+        ✨ Automatycznie dodaj spis treści i sformatuj przez AI
+      </label>
+      <div x-show="aiEnabled" style="display:none; margin-top:0.5rem;">
+        <label for="conv-ai-model">Model AI (OmniRoute)</label>
+        <select id="conv-ai-model" name="ai_model" x-model="aiModel">
+          <option value="">auto/best-free (domyślny)</option>
+          {% for m in models %}
+          <option value="{{ m.model_id }}">{{ m.model_id }}{% if m.is_free %} · free{% endif %}</option>
+          {% endfor %}
+        </select>
+        <p class="subtle" style="font-size:0.78rem; margin:0.3rem 0 0;">
+          AI czyści strukturę, generuje [TOC] i poprawia tabele przed renderem.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PRAWY PANEL: WYJŚCIE I PODGLĄD ================= -->
+  <div class="converter-output card">
+    <div class="converter-output-head">
+      <div>
+        <h2 style="margin:0;">📄 Wyjście i podgląd</h2>
+        <p class="muted" style="margin:0.15rem 0 0; font-size:0.85rem;">Wybierz źródło i kliknij Generuj PDF.</p>
+      </div>
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <span id="converter-spinner" class="spinner htmx-indicator" style="width:18px; height:18px;"></span>
+        <button type="submit" class="btn btn-primary">⚙ Generuj PDF</button>
+      </div>
+    </div>
+    <div id="converter-result">
+      <div class="converter-empty">
+        <p style="font-size:2rem; margin:0;">📑</p>
+        <p>Tu pojawi się podgląd wygenerowanego PDF<br>wraz z przyciskiem pobierania.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="optimizer-toast" x-show="toast" x-transition.opacity style="display:none;" x-text="toast"></div>
+</form>
+
+<script>
+function converterApp() {
+  return {
+    sourceTab: 'file',
+    dragOver: false,
+    fileName: '',
+    sourceText: '',
+    selectedDocId: '',
+    loadedDocTitle: '',
+    docLoading: false,
+    aiEnabled: false,
+    aiModel: '',
+    aiBusy: false,
+    toast: '',
+
+    setTab(t) { this.sourceTab = t; },
+
+    handleDrop(e) {
+      this.dragOver = false;
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+        this.$refs.fileInput.files = e.dataTransfer.files;
+        this.fileName = e.dataTransfer.files[0].name;
+      }
+    },
+    handleFileSelect(e) {
+      this.fileName = (e.target.files && e.target.files.length) ? e.target.files[0].name : '';
+    },
+    clearFile() {
+      this.$refs.fileInput.value = '';
+      this.fileName = '';
+    },
+
+    async loadDocument() {
+      if (!this.selectedDocId) return;
+      this.docLoading = true;
+      try {
+        const resp = await fetch('/converter/document/' + this.selectedDocId);
+        const data = await resp.json();
+        if (data.status === 'ok') {
+          this.sourceText = data.content || '';
+          this.loadedDocTitle = data.title || '';
+          this.showToast('Wczytano dokument ✓');
+        } else {
+          this.showToast('Błąd: ' + (data.error || '?'));
+        }
+      } catch (e) {
+        this.showToast('Błąd wczytywania: ' + e);
+      }
+      this.docLoading = false;
+    },
+
+    async enrichPreview() {
+      if (!this.sourceText.trim()) { this.showToast('Najpierw wklej lub wczytaj tekst.'); return; }
+      this.aiBusy = true;
+      try {
+        const resp = await fetch('/converter/ai-enrich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: this.sourceText, model: this.aiModel || null }),
+        });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+          this.sourceText = data.text;
+          this.showToast('Wzbogacono przez AI ✓');
+        } else {
+          this.showToast('Błąd AI: ' + (data.error || '?'));
+        }
+      } catch (e) {
+        this.showToast('Błąd AI: ' + e);
+      }
+      this.aiBusy = false;
+    },
+
+    showToast(msg) {
+      this.toast = msg;
+      setTimeout(() => { this.toast = ''; }, 2400);
+    },
+  };
+}
+</script>
+{% endblock %}

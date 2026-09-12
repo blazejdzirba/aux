@@ -1,0 +1,171 @@
+/* ---------- Workflow ---------- */
+.wf-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+.wf-side {
+  padding: 1rem 1.25rem;
+}
+.wf-side-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.wf-list {
+  list-style: none;
+  margin: 0 0 0.75rem 0;
+  padding: 0;
+}
+.wf-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 8px;
+  margin-bottom: 0.4rem;
+}
+.wf-list li.active {
+  border-color: var(--color-accent, #d4af37);
+}
+.wf-list-name {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  background: none;
+  border: none;
+  color: var(--color-fg, #f2f0ea);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+}
+.wf-list-btns {
+  display: flex;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+.wf-list-btns .btn {
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.9rem;
+}
+.wf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border, #2c2c34);
+}
+.wf-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+.wf-form input[type="text"],
+.wf-form textarea {
+  padding: 0.45rem 0.6rem;
+  background: var(--color-input-bg, #1b1b21);
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 6px;
+  color: var(--color-fg, #e8e4da);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+.wf-form textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+.wf-step {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.wf-step-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+.wf-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-accent, #d4af37);
+  color: #1b1b1f;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.wf-step-btns {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+}
+.wf-step-btns .btn {
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.9rem;
+}
+.wf-instr {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.92rem;
+  white-space: pre-wrap;
+}
+.wf-block {
+  margin-bottom: 0.75rem;
+}
+.wf-block:last-child {
+  margin-bottom: 0;
+}
+.wf-block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.wf-block pre {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  padding: 0.75rem;
+  background: #141417;
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.wf-form-card {
+  padding: 1rem 1.25rem;
+}
+.wf-form-card .wf-form {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+@media (max-width: 900px) {
+  .wf-layout {
+    grid-template-columns: 1fr;
+  }
+}

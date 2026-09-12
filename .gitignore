@@ -1,6 +1,33 @@
-.venv/
+# Bazy danych
+*.db
+*.sqlite
+*.sqlite3
+
+# Dane lokalne
+data/
+blueprints/
+
+# Python
 __pycache__/
-*.pyc
-data/*.db
-config.json
+*.py[cod]
+*.egg-info/
+.venv/
 venv/
+env/
+
+# Sekrety
+.env
+.env.*
+*.key
+*.pem
+
+# Duplikaty z pobrań/kopiowania
+* (1).*
+* (2).*
+* (3).*
+
+# OS / edytor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

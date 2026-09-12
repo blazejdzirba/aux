@@ -1,0 +1,142 @@
+/* ============================================================
+   AUX / Vibe Center — dopasowanie layoutu
+   1) Wyśrodkowana treść (koniec "rozwalenia" na cały ekran).
+   2) Zwijany sidebar (przycisk « / », stan w localStorage).
+   Ładowany OSTATNI — nadpisuje app.css / theme.css / converter.css.
+   ============================================================ */
+
+/* ---------- 1) Wyśrodkowana treść ---------- */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Każdy bezpośredni blok treści: pełna szerokość do limitu, wyśrodkowany */
+.main-content > * {
+  width: 100%;
+  max-width: 1120px;
+}
+
+/* Czat: węższa kolumna = lepsza czytelność rozmowy */
+.main-content > .chat-page {
+  max-width: 920px;
+}
+
+/* Układy dwupanelowe (lista + edytor / ustawienia + podgląd):
+   szerszy limit, nadal wyśrodkowane */
+.main-content > .docs-page,
+.main-content > .converter-page {
+  max-width: 1500px;
+}
+
+/* ---------- 2) Zwijany sidebar ---------- */
+.sidebar {
+  flex-shrink: 0;
+  overflow-x: hidden;
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  transition: width 0.2s ease, padding 0.2s ease;
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.nav-brand {
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sidebar-toggle {
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+.sidebar-toggle:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.nav-item {
+  white-space: nowrap;
+}
+
+/* Przełącznik motywu jako pozycja nawigacji (przycisk udający link). */
+button.nav-item {
+  background: none;
+  border: none;
+  font: inherit;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+}
+
+/* Stan zwinięty: wąska szyna z samymi ikonami.
+   Klasa wisi na <html> (dopisana w <head>), więc nie ma mignięcia przy ładowaniu. */
+.sidebar-collapsed .sidebar {
+  width: 62px;
+  padding: 1rem 0.5rem;
+}
+.sidebar-collapsed .sidebar-head {
+  justify-content: center;
+}
+.sidebar-collapsed .nav-brand,
+.sidebar-collapsed .nav-section-title,
+.sidebar-collapsed .nav-label {
+  display: none;
+}
+.sidebar-collapsed .nav-item {
+  text-align: center;
+  padding: 0.5rem 0.25rem;
+}
+
+/* ---------- 4) Modele: pasek akcji poza listą ---------- */
+/* Pasek (filtry + Testuj / Usuń) renderowany w models.html NAD scrollowaną
+   listą — zawsze widoczny, nigdy nie ucieka przy scrollowaniu. */
+.models-actionbar {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ---------- 3) Wąskie ekrany: sama szyna ikon ---------- */
+@media (max-width: 760px) {
+  .sidebar {
+    width: 60px;
+    padding: 1rem 0.5rem;
+  }
+  .sidebar-head {
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+  .nav-brand,
+  .nav-section-title,
+  .nav-label,
+  .sidebar-toggle {
+    display: none;
+  }
+  .nav-item {
+    text-align: center;
+    padding: 0.5rem 0.25rem;
+  }
+  .main-content {
+    padding: 1rem;
+  }
+}

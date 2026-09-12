@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Wyszukiwarka — Vibe Center{% endblock %}
+{% block content %}
+<div class="pj-page" x-data="finderApp()" x-init="init()">
+  <div class="pj-head">
+    <div>
+      <h1 class="pj-title">Wyszukiwarka</h1>
+      <p class="pj-sub muted">GitHub API + agent: prawdziwe repozytoria, raport po polsku.</p>
+    </div>
+  </div>
+
+  <div class="card fd-search">
+    <div class="fd-row">
+      <label class="tr-model">
+        <span class="subtle">Tryb</span>
+        <select x-model.number="finderId" @change="savePrefs()" :disabled="busy">
+          <template x-for="m in finders" :key="m.id">
+            <option :value="m.id" x-text="m.name"></option>
+          </template>
+        </select>
+      </label>
+      <label class="tr-model">
+        <span class="subtle">Model</span>
+        <select x-model="modelId" x-ref="modelSel" @change="savePrefs()" :disabled="busy">
+          {% for m in models %}
+          <option value="{{ m.model_id }}">{{ m.display_name or m.model_id }}{% if m.is_free %} · free{% endif %}</option>
+          {% else %}
+          <option value="" disabled selected>Brak modeli — sprawdź endpoint i klucz w Ustawieniach</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <p class="muted fd-mode-desc" x-text="modeDesc()"></p>
+    <div class="fd-row">
+      <input type="text" class="fd-query" x-model="query" :placeholder="modeHint()"
+             @keydown.enter="search()" :disabled="busy" autocomplete="off">
+      <input type="text" class="fd-lang" x-model="language" placeholder="Język (np. python)"
+             @keydown.enter="search()" :disabled="busy" autocomplete="off">
+      <button type="button" class="btn btn-primary" @click="search()" :disabled="busy || !query.trim() || !modelId || !finderId">
+        <span x-show="!busy">🔍 Szukaj</span><span x-show="busy">Szukanie…</span>
+      </button>
+    </div>
+  </div>
+  <p class="muted tr-info" x-show="ghQuery" style="display:none;">
+    GitHub: <code x-text="ghQuery"></code> · <span x-text="totalCount"></span> wyników
+  </p>
+  <p class="muted tr-info" x-show="searchInfo" x-text="searchInfo" style="display:none;"></p>
+
+  <div class="fd-grid" x-show="report || repos.length" style="display:none;">
+    <div class="card fd-pane">
+      <div class="tr-pane-head">
+        <strong>Raport agenta</strong>
+        <button type="button" class="btn btn-ghost" @click="copy()" :disabled="!report">📋 Kopiuj</button>
+      </div>
+      <div class="fd-report" x-text="report"></div>
+    </div>
+    <div class="card fd-pane">
+      <div class="tr-pane-head"><strong>Znalezione repozytoria</strong></div>
+      <ul class="fd-repos">
+        <template x-for="r in repos" :key="r.url">
+          <li>
+            <a :href="r.url" target="_blank" rel="noopener" x-text="r.name"></a>
+            <span class="muted">⭐ <span x-text="r.stars"></span> · <span x-text="r.lang"></span></span>
+            <p class="muted" x-text="r.desc"></p>
+          </li>
+        </template>
+      </ul>
+    </div>
+  </div>
+
+  <div class="status-error" x-show="error" x-text="error" style="display:none; margin-top:1rem;"></div>
+
+  <div class="pj-head" style="margin-top:2rem;">
+    <div>
+      <h2 class="pj-title" style="font-size:1.2rem;">Tryby wyszukiwania</h2>
+      <p class="pj-sub muted">Prompty systemowe agentów — dodawaj własne, żeby rozbudować opcje.</p>
+    </div>
+  </div>
+  <div class="card fd-modes">
+    <template x-for="m in finders" :key="m.id">
+      <div class="fd-mode-item">
+        <div>
+          <strong x-text="m.name"></strong>
+          <p class="muted" x-text="m.description"></p>
+        </div>
+        <div class="fd-mode-btns">
+          <button type="button" class="btn btn-ghost" @click="editMode(m)">✏️ Edytuj</button>
+          <button type="button" class="btn btn-ghost" @click="delMode(m)">🗑 Usuń</button>
+        </div>
+      </div>
+    </template>
+    <p class="muted" x-show="!finders.length">Brak trybów — dodaj pierwszy poniżej.</p>
+    <button type="button" class="btn btn-primary" @click="newMode()" x-show="!showForm">＋ Dodaj tryb</button>
+    <div class="fd-form" x-show="showForm" style="display:none;">
+      <label>Nazwa<input type="text" x-model="form.name" placeholder="Np. Awesome-listy JS"></label>
+      <label>Opis (krótki, dla Ciebie)<input type="text" x-model="form.description" placeholder="Do czego służy ten tryb"></label>
+      <label>Podpowiedź w polu wyszukiwania<input type="text" x-model="form.input_hint" placeholder="Np. 'react table' — po angielsku działa lepiej."></label>
+      <div class="fd-row">
+        <label style="flex:2;">Szablon zapytania GitHub
+          <input type="text" x-model="form.query_template" placeholder="{q}">
+        </label>
+        <label class="tr-model"><span class="subtle">Sortuj</span>
+          <select x-model="form.sort">
+            <option value="stars">wg gwiazdek</option>
+            <option value="updated">wg aktualizacji</option>
+          </select>
+        </label>
+      </div>
+      <p class="muted" style="font-size:0.8rem;">W szablonie: <code>{q}</code> — fraza użytkownika, <code>{lang}</code> — język. Przykłady: <code>{q}</code>, <code>{q} alternative</code>, <code>awesome {q}</code>.</p>
+      <label>Prompt systemowy agenta<textarea x-model="form.system_prompt" rows="8" placeholder="Rola agenta: co ma zrobić z wynikami GitHub API..."></textarea></label>
+      <div class="fd-row">
+        <button type="button" class="btn btn-primary" @click="saveMode()">💾 Zapisz</button>
+        <button type="button" class="btn btn-ghost" @click="showForm = false">Anuluj</button>
+      </div>
+    </div>
+    <div class="status-error" x-show="modeError" x-text="modeError" style="display:none;"></div>
+  </div>
+</div>
+<script type="application/json" id="finders-data">{{ finders | tojson }}</script>
+<script>
+function finderApp() {
+  return {
+    finders: [],
+    finderId: null,
+    modelId: '',
+    query: '',
+    language: '',
+    busy: false,
+    error: '',
+    report: '',
+    repos: [],
+    ghQuery: '',
+    totalCount: 0,
+    searchInfo: '',
+    showForm: false,
+    modeError: '',
+    form: {id: null, name: '', description: '', input_hint: '', query_template: '{q}', sort: 'stars', system_prompt: ''},
+    init() {
+      try {
+        this.finders = JSON.parse(document.getElementById('finders-data').textContent) || [];
+      } catch (e) { this.finders = []; }
+      try {
+        var f = parseInt(localStorage.getItem('fd-mode') || '', 10);
+        if (this.finders.some(function (m) { return m.id === f; })) this.finderId = f;
+        else if (this.finders.length) this.finderId = this.finders[0].id;
+        var s = localStorage.getItem('fd-model');
+        var opts = this.$refs.modelSel ? Array.prototype.map.call(this.$refs.modelSel.options, function (o) { return o.value; }) : [];
+        if (s && opts.indexOf(s) !== -1) this.modelId = s;
+        else if (opts.length) this.modelId = opts[0];
+      } catch (e) {}
+    },
+    savePrefs() {
+      try {
+        localStorage.setItem('fd-mode', String(this.finderId));
+        localStorage.setItem('fd-model', this.modelId);
+      } catch (e) {}
+    },
+    curMode() {
+      var id = this.finderId;
+      return this.finders.find(function (m) { return m.id === id; }) || null;
+    },
+    modeDesc() {
+      var m = this.curMode();
+      return m ? m.description : '';
+    },
+    modeHint() {
+      var m = this.curMode();
+      return (m && m.input_hint) || 'Opisz, czego szukasz…';
+    },
+    async search() {
+      if (this.busy || !this.query.trim() || !this.modelId || !this.finderId) return;
+      this.busy = true; this.error = ''; this.report = ''; this.repos = [];
+      this.ghQuery = ''; this.totalCount = 0; this.searchInfo = '';
+      try {
+        var res = await fetch('/finder/api/search', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({finder_id: this.finderId, model_id: this.modelId, query: this.query, language: this.language})
+        });
+        var d = await res.json();
+        if (d.status !== 'ok') { this.error = d.error || 'Błąd'; return; }
+        this.ghQuery = d.gh_query || '';
+        this.totalCount = d.total_count || 0;
+        this.repos = d.repos || [];
+        this.report = d.report || '';
+        if (d.notice) this.searchInfo = d.notice;
+        else this.searchInfo = 'Raport gotowy w ' + ((d.latency_ms || 0) / 1000).toFixed(1) + ' s · ' + this.modelId;
+      } catch (e) {
+        this.error = 'Błąd połączenia: ' + ((e && e.message) || e);
+      } finally {
+        this.busy = false;
+      }
+    },
+    async copy() {
+      if (!this.report) return;
+      try {
+        await navigator.clipboard.writeText(this.report);
+        this.searchInfo = 'Skopiowano raport do schowka.';
+      } catch (e) {
+        this.error = 'Kopiowanie nieudane — zaznacz tekst ręcznie.';
+      }
+    },
+    async loadFinders() {
+      try {
+        var res = await fetch('/finder/api/finders');
+        var d = await res.json();
+        if (d.status === 'ok') {
+          this.finders = d.finders;
+          var id = this.finderId;
+          if (!this.finders.some(function (m) { return m.id === id; })) {
+            this.finderId = this.finders.length ? this.finders[0].id : null;
+          }
+        }
+      } catch (e) {}
+    },
+    newMode() {
+      this.form = {id: null, name: '', description: '', input_hint: '', query_template: '{q}', sort: 'stars', system_prompt: ''};
+      this.modeError = '';
+      this.showForm = true;
+    },
+    editMode(m) {
+      this.form = {id: m.id, name: m.name, description: m.description || '', input_hint: m.input_hint || '', query_template: m.query_template || '{q}', sort: m.sort || 'stars', system_prompt: m.system_prompt};
+      this.modeError = '';
+      this.showForm = true;
+    },
+    async saveMode() {
+      this.modeError = '';
+      if (!this.form.name.trim() || !this.form.system_prompt.trim()) {
+        this.modeError = 'Nazwa i prompt systemowy są wymagane.';
+        return;
+      }
+      try {
+        var url = '/finder/api/finders' + (this.form.id ? '/' + this.form.id : '');
+        var res = await fetch(url, {
+          method: this.form.id ? 'PUT' : 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(this.form)
+        });
+        var d = await res.json();
+        if (d.status !== 'ok') { this.modeError = d.error || 'Błąd zapisu'; return; }
+        this.showForm = false;
+        await this.loadFinders();
+      } catch (e) {
+        this.modeError = 'Błąd połączenia: ' + ((e && e.message) || e);
+      }
+    },
+    async delMode(m) {
+      if (!confirm('Usunąć tryb "' + m.name + '"?')) return;
+      try {
+        var res = await fetch('/finder/api/finders/' + m.id, {method: 'DELETE'});
+        var d = await res.json();
+        if (d.status !== 'ok') { this.modeError = d.error || 'Błąd usuwania'; return; }
+        await this.loadFinders();
+      } catch (e) {
+        this.modeError = 'Błąd połączenia: ' + ((e && e.message) || e);
+      }
+    }
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% if error is defined and error %}
+<div class="card" style="border-color: var(--color-danger);">
+  <div><span class="chip status-error">błąd generowania</span></div>
+  <pre class="status-error" style="white-space:pre-wrap; margin:0.5rem 0 0; font-size:0.85rem;">{{ error }}</pre>
+  {% if 'WeasyPrint' in error or 'xhtml2pdf' in error %}
+  <p class="subtle" style="font-size:0.8rem; margin:0.5rem 0 0;">
+    Podpowiedź: <code>pip install weasyprint xhtml2pdf</code> — na Linux dodatkowo
+    <code>sudo apt install libpango-1.0-0 libharfbuzz-subset0 libjpeg-dev libopenjp2-7-dev libffi-dev</code>.
+    Szczegóły w <code>CONWERTER_INSTRUKCJA.md</code>.
+  </p>
+  {% endif %}
+</div>
+{% elif filename is defined and filename %}
+<div class="converter-result-ok">
+  <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+    <span class="chip status-ok">PDF gotowy ✓</span>
+    <strong class="truncate" style="max-width:320px;" title="{{ title }}">{{ title }}</strong>
+    <span class="subtle" style="font-size:0.8rem;">{{ size_kb }} KB · {{ chars }} znaków · {{ template_label }}{% if enriched %} · AI ✨{% endif %}</span>
+  </div>
+  {% if ai_warning %}
+  <p class="status-error" style="font-size:0.82rem; margin:0.4rem 0 0;">⚠️ {{ ai_warning }}</p>
+  {% endif %}
+  <iframe id="pdf-preview" src="/converter/pdf/{{ filename }}" title="Podgląd PDF"></iframe>
+  <div style="display:flex; gap:0.5rem; margin-top:0.6rem; flex-wrap:wrap;">
+    <a class="btn btn-primary" href="/converter/pdf/{{ filename }}?download=1">⬇ Pobierz PDF</a>
+    <a class="btn btn-ghost" href="/converter/pdf/{{ filename }}" target="_blank" rel="noopener">↗ Otwórz w nowej karcie</a>
+  </div>
+</div>
+{% endif %}

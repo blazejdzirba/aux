@@ -1,0 +1,42 @@
+{% from "partials/icons.html" import icon %}
+{# Karta projektu. Dane do modali Edytuj/Usuń przekazuje przez data-* + $dispatch
+   (odporne na cudzysłowy/apostrofy w tytułach, niezależne od scope Alpine). #}
+{% macro plural(n, one, few, many) -%}
+{{ n }} {% if n == 1 %}{{ one }}{% elif n % 10 in [2, 3, 4] and n % 100 not in [12, 13, 14] %}{{ few }}{% else %}{{ many }}{% endif %}
+{%- endmacro %}
+{% macro project_card(p) -%}
+<article class="pj-card" x-data="{ menuOpen: false }"
+         data-pid="{{ p.id }}" data-title="{{ p.title | e }}" data-desc="{{ p.description | e }}">
+  <div class="pj-card-head">
+    <a class="pj-card-title" href="/projects/{{ p.id }}" title="Otwórz projekt">
+      <span class="pj-card-ico">{{ icon('folder') }}</span>
+      <span class="pj-card-name">{{ p.title }}</span>
+    </a>
+    <div class="pj-menu-wrap">
+      <button type="button" class="pj-icon-btn" title="Opcje" aria-label="Opcje projektu"
+              @click="menuOpen = !menuOpen">{{ icon('dots') }}</button>
+      <div class="pj-menu" x-show="menuOpen" x-transition.opacity
+           @click.outside="menuOpen = false" style="display:none;">
+        <button type="button" class="pj-menu-item"
+                @click="menuOpen = false; $dispatch('pj-edit', $el.closest('.pj-card').dataset)">{{ icon('pencil') }} Edytuj</button>
+        <button type="button" class="pj-menu-item pj-danger"
+                @click="menuOpen = false; $dispatch('pj-delete', $el.closest('.pj-card').dataset)">{{ icon('trash') }} Usuń</button>
+      </div>
+    </div>
+  </div>
+  {% if p.description %}
+  <p class="pj-card-desc">{{ p.description }}</p>
+  {% else %}
+  <p class="pj-card-desc pj-card-desc-empty">Brak opisu</p>
+  {% endif %}
+  <div class="pj-pills">
+    <span class="pj-pill" title="Prompty w projekcie">{{ icon('terminal') }} {{ plural(p.counts.prompts, "Prompt", "Prompty", "Promptów") }}</span>
+    <span class="pj-pill" title="Dokumenty w projekcie">{{ icon('file-text') }} {{ plural(p.counts.documents, "Dokument", "Dokumenty", "Dokumentów") }}</span>
+    <span class="pj-pill" title="Notatki w projekcie">{{ icon('pencil') }} {{ plural(p.counts.notes, "Notatka", "Notatki", "Notatek") }}</span>
+  </div>
+  <div class="pj-card-foot">
+    <span class="pj-date">{{ icon('clock') }} {{ p.updated_display }}</span>
+    <a class="pj-open" href="/projects/{{ p.id }}">Otwórz {{ icon('arrow-right') }}</a>
+  </div>
+</article>
+{%- endmacro %}

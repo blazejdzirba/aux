@@ -1,6 +1,11 @@
-<div id="doc-item-{{ d.id }}" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; padding:0.5rem 0.25rem; border-bottom:1px solid var(--color-border);">
-  <a href="/documents/{{ d.id }}" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ d.title }}</a>
-  <span class="subtle" style="font-size:0.72rem;">{{ d.updated_at[:10] }}</span>
-  <a class="btn btn-ghost" style="padding:0.1rem 0.45rem; font-size:0.78rem;" href="/documents/{{ d.id }}/edit">Edytuj</a>
-  <button class="btn btn-ghost" style="padding:0.1rem 0.45rem; font-size:0.78rem;" hx-delete="/documents/{{ d.id }}" hx-confirm="Usunąć?" hx-target="#doc-item-{{ d.id }}" hx-swap="outerHTML">Usuń</button>
+<div id="doc-item-{{ d.id }}" class="docs-list-item {% if doc is defined and doc and doc.id == d.id %}active{% endif %}">
+  <a href="/documents/{{ d.id }}" class="docs-list-link">
+    <span class="docs-list-title">{{ d.title }}</span>
+    <span class="subtle docs-list-date">{{ d.updated_at[:10] }}</span>
+  </a>
+  <span class="docs-list-actions">
+    <a class="btn btn-ghost" style="padding:0.1rem 0.45rem; font-size:0.78rem;" href="/documents/{{ d.id }}/edit">Edytuj</a>
+    <button class="btn btn-ghost" style="padding:0.1rem 0.45rem; font-size:0.78rem;"
+            hx-delete="/documents/{{ d.id }}" hx-confirm="Usunąć?" hx-target="#doc-item-{{ d.id }}" hx-swap="outerHTML">Usuń</button>
+  </span>
 </div>

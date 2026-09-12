@@ -1,0 +1,170 @@
+/* ============================================================
+   AUX / Vibe Center — visual polish (DARK MODE ONLY).
+   Reguły wyłącznie dla motywu ciemnego: każda jest scopowana
+   przez html:not([data-theme="xp"]), więc jasny motyw XP
+   zostaje nietknięty. Plik ładowany PRZED theme-xp.css.
+   Zawartość: typografia podglądu dokumentów (markdown),
+   empty-state playgroundu. (Grid promptów dojdzie po
+   otrzymaniu templates/prompts.html.)
+   ============================================================ */
+
+/* ---------- 1. DOKUMENTY — typografia .docs-view-body ---------- */
+html:not([data-theme="xp"]) .docs-view-body {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  overflow-wrap: break-word;
+}
+html:not([data-theme="xp"]) .docs-view-body > :first-child { margin-top: 0; }
+html:not([data-theme="xp"]) .docs-view-body > :last-child { margin-bottom: 0; }
+html:not([data-theme="xp"]) .docs-view-body h1 {
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 1.1em 0 0.55em;
+  color: var(--color-fg, #f2f0ea);
+}
+html:not([data-theme="xp"]) .docs-view-body h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 1em 0 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--color-border, #2c2c34);
+  color: var(--color-fg, #f2f0ea);
+}
+html:not([data-theme="xp"]) .docs-view-body h3 {
+  font-size: 1.12rem;
+  font-weight: 600;
+  margin: 0.9em 0 0.45em;
+  color: var(--color-fg, #f2f0ea);
+}
+html:not([data-theme="xp"]) .docs-view-body h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.8em 0 0.4em;
+}
+html:not([data-theme="xp"]) .docs-view-body p { margin: 0 0 0.85em; }
+html:not([data-theme="xp"]) .docs-view-body ul,
+html:not([data-theme="xp"]) .docs-view-body ol {
+  margin: 0 0 0.85em;
+  padding-left: 1.6em;
+}
+html:not([data-theme="xp"]) .docs-view-body ul { list-style: disc; }
+html:not([data-theme="xp"]) .docs-view-body ol { list-style: decimal; }
+html:not([data-theme="xp"]) .docs-view-body li { margin: 0.25em 0; }
+html:not([data-theme="xp"]) .docs-view-body li > ul,
+html:not([data-theme="xp"]) .docs-view-body li > ol { margin-bottom: 0.25em; }
+html:not([data-theme="xp"]) .docs-view-body pre {
+  margin: 0 0 0.85em;
+  padding: 0.75rem 1rem;
+  background: #141417;
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+html:not([data-theme="xp"]) .docs-view-body pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+}
+html:not([data-theme="xp"]) .docs-view-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background: rgba(212, 175, 55, 0.12);
+  padding: 0.12em 0.35em;
+  border-radius: 4px;
+}
+html:not([data-theme="xp"]) .docs-view-body blockquote {
+  margin: 0 0 0.85em;
+  padding: 0.4rem 0 0.4rem 1rem;
+  border-left: 3px solid var(--color-accent, #d4af37);
+  color: var(--color-fg-muted, #b9b4a8);
+}
+html:not([data-theme="xp"]) .docs-view-body blockquote > :last-child { margin-bottom: 0; }
+html:not([data-theme="xp"]) .docs-view-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 0.85em;
+  font-size: 0.9rem;
+}
+html:not([data-theme="xp"]) .docs-view-body th,
+html:not([data-theme="xp"]) .docs-view-body td {
+  border: 1px solid var(--color-border, #2c2c34);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+html:not([data-theme="xp"]) .docs-view-body th {
+  background: var(--color-bg-soft, #26262c);
+  font-weight: 600;
+}
+html:not([data-theme="xp"]) .docs-view-body a { color: var(--color-accent, #d4af37); }
+html:not([data-theme="xp"]) .docs-view-body hr {
+  border: none;
+  border-top: 1px solid var(--color-border, #2c2c34);
+  margin: 1.2em 0;
+}
+html:not([data-theme="xp"]) .docs-view-body img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+/* ---------- 2. PLAYGROUND — empty-state: ikona SVG + glow ---------- */
+html:not([data-theme="xp"]) .chat-empty .pg-empty-icon {
+  width: 52px;
+  height: 52px;
+  padding: 11px;
+  border-radius: 50%;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  background: rgba(212, 175, 55, 0.08);
+  color: var(--color-accent, #d4af37);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.22);
+}
+
+/* ============================================================
+   PLAYGROUND — rytm pionowy (OBA motywy: sam layout, bez kolorów).
+   Karta nie rozciąga się na pełną wysokość ekranu: historia ma
+   min. 240px i maks. do wysokości okna (wewnętrzny scroll),
+   a pasek inputu siedzi tuż pod treścią.
+   ============================================================ */
+html body .chat-page {
+  height: auto;
+}
+html body .chat-history {
+  min-height: 240px;
+  max-height: calc(100vh - 360px);
+  overflow-y: auto;
+}
+html body .chat-header {
+  padding: 0.9rem 1.1rem;
+  gap: 0.6rem 1rem;
+}
+html body .chat-header-controls {
+  gap: 0.5rem;
+}
+html body .chat-empty {
+  padding: 2rem 1rem;
+  gap: 0.6rem;
+}
+html body .chat-empty p {
+  margin: 0;
+}
+html body .chat-inputbar {
+  padding: 0.75rem 1rem;
+  gap: 0.6rem;
+}
+/* Select z modelem nigdy nie wystaje poza kartę czatu. */
+html body .chat-page {
+  overflow: hidden;
+}
+html body .chat-header-controls {
+  max-width: 100%;
+  min-width: 0;
+}
+html body .chat-header-controls select {
+  max-width: 100%;
+  box-sizing: border-box;
+}

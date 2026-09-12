@@ -1,0 +1,55 @@
+{% from "partials/icons.html" import icon %}
+{# Wiersze elementów w detalu projektu (Krok 2: zakładki).
+   Notatki: edycja + usuwanie (żyją tylko w projekcie).
+   Prompty/dokumenty: link do modułu + odpięcie (element zostaje w module). #}
+{% macro note_row(n) -%}
+<article class="pj-row" data-nid="{{ n.id }}" data-title="{{ n.title | e }}">
+  <div class="pj-row-main">
+    <div class="pj-row-ico">{{ icon('pencil') }}</div>
+    <div class="pj-row-body">
+      <div class="pj-row-title">{{ n.title }}</div>
+      {% if n.content %}<div class="pj-row-excerpt">{{ n.content[:140] }}{% if n.content|length > 140 %}…{% endif %}</div>{% endif %}
+      <div class="pj-row-meta">{{ icon('clock') }} {{ n.updated_display }}</div>
+    </div>
+  </div>
+  <div class="pj-row-actions">
+    <button type="button" class="pj-btn-sm" @click="$dispatch('pj-note-edit', noteData($el))">{{ icon('pencil') }} Edytuj</button>
+    <button type="button" class="pj-btn-sm pj-danger-text" @click="$dispatch('pj-note-delete', {id: $el.closest('[data-nid]').dataset.nid, title: $el.closest('[data-nid]').dataset.title})">{{ icon('trash') }} Usuń</button>
+  </div>
+  <div class="pj-hidden" data-note-content>{{ n.content }}</div>
+</article>
+{%- endmacro %}
+{% macro prompt_row(pr, project_id) -%}
+<article class="pj-row" data-un-action="/projects/{{ project_id }}/prompts/{{ pr.id }}/unassign" data-un-name="{{ pr.title | e }}" data-un-kind="prompt">
+  <div class="pj-row-main">
+    <div class="pj-row-ico">{{ icon('terminal') }}</div>
+    <div class="pj-row-body">
+      <div class="pj-row-title">{{ pr.title }}</div>
+      {% if pr.content %}<div class="pj-row-excerpt">{{ pr.content[:140] }}{% if pr.content|length > 140 %}…{% endif %}</div>{% endif %}
+      <div class="pj-row-meta">{{ icon('clock') }} {{ pr.created_display }}
+        {% if pr.mode %}<span class="pj-mini-badge">{{ pr.mode }}</span>{% endif %}
+        {% if pr.source %}<span class="pj-mini-badge">{{ pr.source }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="pj-row-actions">
+    <a class="pj-btn-sm" href="/prompts" title="Otwórz moduł Promptów">{{ icon('arrow-right') }} Prompty</a>
+    <button type="button" class="pj-btn-sm pj-danger-text" @click="$dispatch('pj-unassign', $el.closest('.pj-row').dataset)">Odepnij</button>
+  </div>
+</article>
+{%- endmacro %}
+{% macro doc_row(d, project_id) -%}
+<article class="pj-row" data-un-action="/projects/{{ project_id }}/documents/{{ d.id }}/unassign" data-un-name="{{ d.title | e }}" data-un-kind="dokument">
+  <div class="pj-row-main">
+    <div class="pj-row-ico">{{ icon('file-text') }}</div>
+    <div class="pj-row-body">
+      <div class="pj-row-title">{{ d.title }}</div>
+      <div class="pj-row-meta">{{ icon('clock') }} {{ d.updated_display }}</div>
+    </div>
+  </div>
+  <div class="pj-row-actions">
+    <a class="pj-btn-sm" href="/documents/{{ d.id }}/edit" title="Edytuj dokument">{{ icon('pencil') }} Edytuj</a>
+    <button type="button" class="pj-btn-sm pj-danger-text" @click="$dispatch('pj-unassign', $el.closest('.pj-row').dataset)">Odepnij</button>
+  </div>
+</article>
+{%- endmacro %}

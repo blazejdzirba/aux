@@ -1,49 +1,131 @@
 {% extends "base.html" %}
-{% block title %}Optymalizator Promptów — Vibe Center{% endblock %}
+{% block title %}Playground — Vibe Center{% endblock %}
 {% block content %}
-<h1>✨ Optymalizator Promptów</h1>
-<p class="muted" style="margin-top:-0.5rem;">Ulepszaj prompty, generuj pytania doprecyzowujące lub twórz prompt systemowy.</p>
-
-<div x-data="{ tab: '{{ tab|default("playground") }}' }">
-  <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-    <button class="btn" :class="tab === 'playground' ? 'btn-primary' : 'btn-ghost'" @click="tab = 'playground'">Playground</button>
-    <button class="btn" :class="tab === 'optimizer' ? 'btn-primary' : 'btn-ghost'" @click="tab = 'optimizer'">Optymalizator</button>
-  </div>
-
-  <div x-show="tab === 'playground'" class="card">
-    <form hx-post="/playground/run" hx-target="#playground-result" hx-swap="innerHTML">
-      <label for="pg-model">Model (zaciągnięty z OmniRouter)</label>
-      <select id="pg-model" name="model_id" required>
+<div class="chat-page" x-data="chatApp()">
+  <!-- Nagłówek czatu: model + reset -->
+  <div class="chat-header">
+    <div>
+      <h1 style="font-size:1.15rem; margin:0;">🎮 Playground</h1>
+      <p class="muted" style="margin:0.15rem 0 0; font-size:0.85rem;">Czat z modelem z OmniRouter — historia konwersacji trzymana w sesji.</p>
+    </div>
+    <div class="chat-header-controls">
+      <label for="pg-model" class="subtle" style="font-size:0.8rem;">Model</label>
+      <select id="pg-model" x-model="modelId" style="min-width:280px;">
         {% for m in models %}
         <option value="{{ m.model_id }}">{{ m.provider_prefix }}/{{ m.model_name }}{% if m.is_free %} · free{% endif %}</option>
         {% else %}
         <option value="" disabled selected>Brak modeli — sprawdź endpoint i klucz w Ustawieniach</option>
         {% endfor %}
       </select>
-      <label for="pg-prompt" style="margin-top:0.75rem;">Prompt</label>
-      <textarea id="pg-prompt" name="prompt" required placeholder="Wpisz prompt do wykonania..."></textarea>
-      <div style="margin-top:0.75rem;">
-        <button type="submit" class="btn btn-primary">Uruchom</button>
-      </div>
-    </form>
-    <div id="playground-result" style="margin-top:1rem;"></div>
+      <button type="button" class="btn btn-ghost" @click="clearChat()" :disabled="busy || messages.length === 0">🧹 Wyczyść czat</button>
+    </div>
   </div>
 
-  <div x-show="tab === 'optimizer'" style="display:none;" class="card">
-    <form hx-post="/prompt-optimizer/optimize" hx-target="#optimizer-result" hx-swap="innerHTML">
-      <label for="opt-prompt">Prompt do optymalizacji</label>
-      <textarea id="opt-prompt" name="prompt" required placeholder="Wklej prompt, który mam ulepszyć..."></textarea>
-      <label for="opt-mode" style="margin-top:0.75rem;">Tryb</label>
-      <select id="opt-mode" name="mode">
-        <option value="standard">Standard</option>
-        <option value="mega">Mega (pytania doprecyzowujące)</option>
-        <option value="systemowy">Systemowy (tworzy prompt systemowy)</option>
-      </select>
-      <div style="margin-top:0.75rem;">
-        <button type="submit" class="btn btn-primary">Optymalizuj</button>
+  <!-- Historia wiadomości -->
+  <div class="chat-history" x-ref="history">
+    <template x-if="messages.length === 0 && !busy">
+      <div class="chat-empty">
+        <p style="margin:0;"><svg class="ic pg-empty-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg></p>
+        <p>Wybierz model i napisz pierwszą wiadomość.<br>Enter — wyślij · Shift+Enter — nowa linia</p>
       </div>
-    </form>
-    <div id="optimizer-result" style="margin-top:1rem;"></div>
+    </template>
+    <template x-for="(msg, i) in messages" :key="i">
+      <div :class="msg.role === 'user' ? 'chat-msg user' : 'chat-msg model'">
+        <template x-if="msg.role === 'model'">
+          <div class="msg-meta">
+            <span class="chip" :class="msg.status === 'ok' ? 'status-ok' : 'status-error'" x-text="msg.status"></span>
+            <span class="chip mono" x-text="msg.model"></span>
+            <span class="chip" x-text="msg.latency"></span>
+          </div>
+        </template>
+        <template x-if="msg.role === 'model' && msg.text">
+          <div class="msg-body" x-html="renderMd(msg.text)"></div>
+        </template>
+        <template x-if="msg.role === 'model' && msg.error">
+          <pre class="msg-error" x-text="msg.error"></pre>
+        </template>
+        <template x-if="msg.role === 'user'">
+          <div class="msg-body" style="white-space:pre-wrap;" x-text="msg.text"></div>
+        </template>
+      </div>
+    </template>
+    <template x-if="busy">
+      <div class="chat-msg model">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+        <span class="muted" style="font-size:0.8rem; margin-left:0.4rem;">Model pisze…</span>
+      </div>
+    </template>
+  </div>
+
+  <!-- Panel wprowadzania -->
+  <div class="chat-inputbar">
+    <textarea x-ref="input" x-model="draft" rows="1" autofocus
+      @keydown.enter="onEnter($event)"
+      placeholder="Napisz wiadomość… (Enter = wyślij, Shift+Enter = nowa linia)"></textarea>
+    <button type="button" class="btn btn-primary" @click="send()" :disabled="busy || !draft.trim() || !modelId">Wyślij ➤</button>
   </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script>
+function chatApp() {
+  return {
+    modelId: {{ (selected_model or (models[0].model_id if models else '')) | tojson }},
+    draft: '',
+    busy: false,
+    messages: [],
+    async send() {
+      const text = this.draft.trim();
+      if (!text || this.busy || !this.modelId) return;
+      this.messages.push({ role: 'user', text: text });
+      this.draft = '';
+      this.busy = true;
+      this.scrollToBottom();
+      // Pełna historia do backendu (błędne odpowiedzi pomijamy, żeby nie psuły kontekstu)
+      const history = this.messages
+        .filter(m => m.text && m.status !== 'error')
+        .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
+      try {
+        const resp = await fetch('/playground/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model_id: this.modelId, messages: history })
+        });
+        const data = await resp.json();
+        this.messages.push({
+          role: 'model', text: data.text || '', status: data.status || 'error',
+          model: this.modelId,
+          latency: data.latency_ms != null ? data.latency_ms + ' ms' : '—',
+          error: data.error || ''
+        });
+      } catch (e) {
+        this.messages.push({ role: 'model', text: '', status: 'error', model: this.modelId, latency: '—', error: String(e) });
+      }
+      this.busy = false;
+      this.scrollToBottom();
+      this.$refs.input.focus();
+    },
+    onEnter(e) {
+      if (e.shiftKey) return; // Shift+Enter = nowa linia
+      e.preventDefault();
+      this.send();
+    },
+    clearChat() {
+      this.messages = [];
+      this.busy = false;
+      this.$refs.input.focus();
+    },
+    renderMd(t) {
+      return DOMPurify.sanitize(marked.parse(t));
+    },
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const el = this.$refs.history;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    }
+  }
+}
+</script>
 {% endblock %}
