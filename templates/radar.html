@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Radar — Vibe Center{% endblock %}
+{% block content %}
+<div class="pj-page" x-data="radarApp()" x-init="init()">
+  <div class="pj-head">
+    <div>
+      <h1 class="pj-title">📡 Radar free LLM</h1>
+      <p class="pj-sub muted">Snapshot darmowych ofert + alerty o nowościach. Auto-check raz dziennie przy starcie.</p>
+    </div>
+  </div>
+
+  <div class="card rd-status">
+    <span class="muted" x-text="statusText()"></span>
+    <button type="button" class="btn btn-primary" @click="refresh()" :disabled="busy">
+      <span x-show="!busy">🔄 Sprawdź teraz</span><span x-show="busy">Sprawdzanie…</span>
+    </button>
+  </div>
+  <p class="muted tr-info" x-show="refreshMsg" x-text="refreshMsg" style="display:none;"></p>
+  <div class="status-error" x-show="error" x-text="error" style="display:none;"></div>
+
+  <div class="pj-head" style="margin-top:1.5rem;">
+    <div>
+      <h2 class="pj-title" style="font-size:1.2rem;">Nowości <span class="muted" x-show="unseen" x-text="'(' + unseen + ' nieprzeczytane)'"></span></h2>
+    </div>
+    <button type="button" class="btn btn-ghost" @click="markSeen()" :disabled="!unseen">✓ Oznacz jako przeczytane</button>
+  </div>
+  <div class="card rd-news" x-show="news.length" style="display:none;">
+    <template x-for="n in news" :key="n.id">
+      <div class="rd-news-item" :class="n.seen ? '' : 'fresh'">
+        <div>
+          <strong x-text="n.title"></strong>
+          <p class="muted" x-text="n.detail" x-show="n.detail"></p>
+        </div>
+        <span class="muted rd-date" x-text="(n.created_at || '').slice(0, 16).replace('T', ' ')"></span>
+      </div>
+    </template>
+  </div>
+  <p class="muted" x-show="!news.length">Brak nowości — kliknij „Sprawdź teraz", żeby pobrać pierwszy snapshot.</p>
+
+  <div class="pj-head" style="margin-top:1.5rem;">
+    <div>
+      <h2 class="pj-title" style="font-size:1.2rem;">Modele <span class="muted" x-text="'(' + filteredModels().length + ')'"></span></h2>
+    </div>
+  </div>
+  <div class="card rd-filters">
+    <input type="text" x-model="fQuery" placeholder="Szukaj modelu lub providera…" autocomplete="off">
+    <select x-model="fProvider">
+      <option value="">Wszyscy providerzy</option>
+      <template x-for="p in providerNames()" :key="p">
+        <option :value="p" x-text="p"></option>
+      </template>
+    </select>
+    <select x-model="fStatus">
+      <option value="">Każdy status</option>
+      <option value="Online">Online</option>
+      <option value="Offline">Offline</option>
+    </select>
+    <label class="rd-check"><input type="checkbox" x-model="fVerified"> tylko Verified</label>
+  </div>
+  <div class="card rd-table-wrap rd-models-wrap">
+    <table class="rd-table">
+      <thead><tr>
+        <th>Model</th><th>Provider</th><th>Score</th><th>Kontekst</th>
+        <th>Limit</th><th>Wydany</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        <template x-for="m in filteredModels()" :key="m.provider + '|' + m.model">
+          <tr>
+            <td><a :href="m.model_url" target="_blank" rel="noopener" x-text="m.model"></a>
+              <span class="rd-verified" x-show="m.verified" title="Zweryfikowany żywym API">✓</span></td>
+            <td x-text="m.provider"></td>
+            <td x-text="m.score"></td>
+            <td x-text="m.context"></td>
+            <td x-text="m.rate_limit"></td>
+            <td x-text="m.released"></td>
+            <td><span class="rd-status-pill" :class="m.status === 'Online' ? 'on' : 'off'" x-text="m.status || '—'"></span></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <p class="muted" x-show="!filteredModels().length" style="padding:0 1rem;">Brak wyników dla tych filtrów.</p>
+  </div>
+
+  <div class="pj-head" style="margin-top:1.5rem;">
+    <div>
+      <h2 class="pj-title" style="font-size:1.2rem;">Providerzy <span class="muted" x-text="'(' + providers.length + ')'"></span></h2>
+    </div>
+  </div>
+  <div class="card rd-table-wrap">
+    <table class="rd-table">
+      <thead><tr><th>Provider</th><th>Modele free</th><th>Karta?</th><th>Max kontekst</th><th>Klucz</th></tr></thead>
+      <tbody>
+        <template x-for="p in providers" :key="p.name">
+          <tr>
+            <td><strong x-text="p.name"></strong> <span x-show="isFresh(p.first_seen)" title="Nowy w ciągu 7 dni">🆕</span></td>
+            <td x-text="p.free_models"></td>
+            <td x-text="p.cc || '—'"></td>
+            <td x-text="p.max_context || '—'"></td>
+            <td><a :href="p.key_url" target="_blank" rel="noopener" x-show="p.key_url">→ weź klucz</a></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+</div>
+<script type="application/json" id="radar-data">{{ {"news": news, "providers": providers, "models": models, "status": status} | tojson }}</script>
+<script>
+function radarApp() {
+  return {
+    news: [],
+    providers: [],
+    models: [],
+    status: {},
+    unseen: 0,
+    busy: false,
+    error: '',
+    refreshMsg: '',
+    fQuery: '',
+    fProvider: '',
+    fStatus: '',
+    fVerified: false,
+    init() {
+      try {
+        var d = JSON.parse(document.getElementById('radar-data').textContent) || {};
+        this.news = d.news || [];
+        this.providers = d.providers || [];
+        this.models = (d.models || []).slice().sort(function (a, b) {
+          return (parseFloat(b.score) || 0) - (parseFloat(a.score) || 0);
+        });
+        this.status = d.status || {};
+        this.unseen = this.status.unseen || 0;
+      } catch (e) {}
+    },
+    statusText() {
+      var s = this.status || {};
+      if (!s.last_fetch_at) return 'Jeszcze nie sprawdzano.';
+      var t = 'Ostatnie sprawdzenie: ' + String(s.last_fetch_at).slice(0, 16).replace('T', ' ')
+        + ' · ' + (s.providers || 0) + ' providerów, ' + (s.models || 0) + ' modeli';
+      if (s.last_status && s.last_status !== 'ok') t += ' · ⚠ ' + s.last_status;
+      return t;
+    },
+    providerNames() {
+      var seen = {};
+      this.models.forEach(function (m) { seen[m.provider] = 1; });
+      return Object.keys(seen).sort();
+    },
+    filteredModels() {
+      var q = this.fQuery.trim().toLowerCase();
+      var p = this.fProvider, st = this.fStatus, v = this.fVerified;
+      return this.models.filter(function (m) {
+        if (p && m.provider !== p) return false;
+        if (st && m.status !== st) return false;
+        if (v && !m.verified) return false;
+        if (q && (m.model + ' ' + m.provider).toLowerCase().indexOf(q) === -1) return false;
+        return true;
+      });
+    },
+    isFresh(firstSeen) {
+      if (!firstSeen) return false;
+      var d = new Date(String(firstSeen).replace(' ', 'T'));
+      return (Date.now() - d.getTime()) < 7 * 86400000;
+    },
+    async refresh() {
+      if (this.busy) return;
+      this.busy = true; this.error = ''; this.refreshMsg = '';
+      try {
+        var res = await fetch('/radar/api/refresh', {method: 'POST'});
+        var d = await res.json();
+        if (d.status !== 'ok') { this.error = (d.result && d.result.reason) || d.error || 'Błąd'; return; }
+        var r = d.result || {};
+        if (r.status === 'skipped') { this.refreshMsg = r.reason || 'Pominięto.'; return; }
+        this.refreshMsg = 'Pobrano: ' + (r.providers || 0) + ' providerów, ' + (r.models || 0)
+          + ' modeli, ' + (r.news || 0) + ' nowości.'
+          + ((r.errors && r.errors.length) ? ' Błędy: ' + r.errors.join(' | ') : '');
+        setTimeout(function () { location.reload(); }, 1200);
+      } catch (e) {
+        this.error = 'Błąd połączenia: ' + ((e && e.message) || e);
+      } finally {
+        this.busy = false;
+      }
+    },
+    async markSeen() {
+      try {
+        var res = await fetch('/radar/api/seen', {method: 'POST'});
+        var d = await res.json();
+        if (d.status === 'ok') {
+          this.news.forEach(function (n) { n.seen = 1; });
+          this.unseen = 0;
+          var el = document.getElementById('radar-badge');
+          if (el) el.style.display = 'none';
+        }
+      } catch (e) {}
+    }
+  };
+}
+</script>
+{% endblock %}

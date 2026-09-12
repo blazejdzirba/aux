@@ -7,8 +7,8 @@
     {{ m.model_id }}
     {% if m.is_free %}<span class="chip" style="margin-left:0.4rem;">FREE</span>{% endif %}
   </td>
-  <td class="subtle" style="text-align:right; white-space:nowrap;">
-    {{ "{:,}".format(m.context_length).replace(",", " ") if m.context_length else "—" }} tok.
+  <td class="subtle" style="text-align:right; white-space:nowrap;" title="{{ '{:,}'.format(m.context_length).replace(',', ' ') + ' tokenów' if m.context_length else 'brak danych o kontekście' }}">
+    {{ m.context_length|ctx }}
   </td>
   <td style="white-space:nowrap;">
     {% if m.last_status == 'ok' %}
@@ -21,6 +21,8 @@
   </td>
   <td class="subtle" style="white-space:nowrap;">🕐 {{ m.last_checked_at[11:16] if m.last_checked_at else '—' }}</td>
   <td class="row-actions" style="white-space:nowrap;">
+    <a class="icon-btn" title="Otwórz w Playground" href="/playground?model={{ m.model_id | urlencode }}"
+       style="text-decoration:none; display:inline-block;">▶️</a>
     <button type="button" class="icon-btn" id="test-btn-{{ m.id }}" title="Testuj ponownie"
             hx-post="/models/{{ m.id }}/test" hx-target="#model-{{ m.id }}" hx-swap="outerHTML"
             hx-indicator="#spinner-{{ m.id }}">
@@ -29,6 +31,10 @@
     </button>
     <button type="button" class="icon-btn" title="Notatki / tagi"
             hx-get="/models/{{ m.id }}/info" hx-target="#model-info-modal" hx-swap="innerHTML">ℹ️</button>
+    <button type="button" class="icon-btn" title="{{ 'Usuń z ulubionych' if m.is_favorite else 'Dodaj do ulubionych' }}"
+            hx-post="/models/{{ m.id }}/{{ 'unfavorite' if m.is_favorite else 'favorite' }}"
+            hx-target="#model-{{ m.id }}" hx-swap="outerHTML"
+            {% if m.is_favorite %}style="color:#FFC73C;"{% endif %}>{{ '⭐' if m.is_favorite else '☆' }}</button>
     <button type="button" class="icon-btn danger" title="Usuń z użycia"
             hx-post="/models/{{ m.id }}/delete" hx-confirm="Usunąć model „{{ m.model_id }}” z listy w użyciu?"
             hx-target="#model-{{ m.id }}" hx-swap="outerHTML">🗑</button>

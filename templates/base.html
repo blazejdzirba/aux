@@ -3,43 +3,164 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="dark light">
   <title>{% block title %}Vibe Center{% endblock %}</title>
-  <link rel="stylesheet" href="/static/app.css?v=3">
+  <link rel="stylesheet" href="/static/app.css?v=7">
   <link rel="stylesheet" href="/static/theme.css?v=1">
   <link rel="stylesheet" href="/static/spinner.css?v=1">
+  <link rel="stylesheet" href="/static/converter.css?v=3">
+  <link rel="stylesheet" href="/static/layout.css?v=2">
+  <link rel="stylesheet" href="/static/voice.css?v=1">
+  <link rel="stylesheet" href="/static/projects.css?v=1">
+  <link rel="stylesheet" href="/static/translator.css?v=2">
+  <link rel="stylesheet" href="/static/finder.css?v=2">
+  <link rel="stylesheet" href="/static/workflows.css?v=2">
+  <link rel="stylesheet" href="/static/radar.css?v=2">
+  <link rel="stylesheet" href="/static/visual-polish.css?v=3">
+  <link rel="stylesheet" href="/static/theme-xp.css?v=5">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+    // Przywróć stan sidebara PRZED malowaniem strony (brak mignięcia / animacji).
+    try {
+      if (localStorage.getItem('aux_sidebar_collapsed') === '1') {
+        document.documentElement.classList.add('sidebar-collapsed');
+      }
+    } catch (e) {}
+    // Przywróć motyw PRZED malowaniem strony.
+    try {
+      if ((localStorage.getItem('aux_theme') || 'dark') === 'xp') {
+        document.documentElement.setAttribute('data-theme', 'xp');
+      }
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <div class="app-layout">
     <aside class="sidebar">
-      <div class="nav-brand" style="margin-bottom:1.25rem;">
-        <span class="dot">●</span> Vibe Center
+      <div class="sidebar-head">
+        <div class="nav-brand">
+          <span class="dot">●</span> <span class="nav-brand-text">Vibe Center</span>
+        </div>
+        <button type="button" id="sidebar-toggle" class="sidebar-toggle" title="Zwiń / rozwiń panel">«</button>
       </div>
 
       <div class="nav-section-title">Baza wiedzy</div>
       <nav>
-        <a class="nav-item {% if active_page == 'prompts' %}active{% endif %}" href="/prompts">📝 Prompty</a>
-        <a class="nav-item {% if active_page == 'documents' %}active{% endif %}" href="/documents">📄 Dokumenty</a>
+        <a class="nav-item {% if active_page == 'projects' %}active{% endif %}" href="/projects"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg> <span class="nav-label">Projekty</span></a>
+        <a class="nav-item {% if active_page == 'prompts' %}active{% endif %}" href="/prompts">📝 <span class="nav-label">Prompty</span></a>
+        <a class="nav-item {% if active_page == 'documents' %}active{% endif %}" href="/documents">📄 <span class="nav-label">Dokumenty</span></a>
       </nav>
 
       <div class="nav-section-title">Zasoby</div>
       <nav>
-        <a class="nav-item {% if active_page == 'vault' %}active{% endif %}" href="/vault">🔑 Klucze API</a>
-        <a class="nav-item {% if active_page == 'resources' %}active{% endif %}" href="/resources">🧰 Zasoby</a>
-        <a class="nav-item {% if active_page == 'models' %}active{% endif %}" href="/models">🤖 Modele</a>
-        <a class="nav-item {% if active_page == 'playground' %}active{% endif %}" href="/playground">✨ Optymalizator Promptów</a>
+        <a class="nav-item {% if active_page == 'vault' %}active{% endif %}" href="/vault">🔑 <span class="nav-label">Klucze API</span></a>
+        <a class="nav-item {% if active_page == 'resources' %}active{% endif %}" href="/resources">🧰 <span class="nav-label">Zasoby</span></a>
+        <a class="nav-item {% if active_page == 'models' %}active{% endif %}" href="/models">🤖 <span class="nav-label">Modele</span></a>
+        <a class="nav-item {% if active_page == 'radar' %}active{% endif %}" href="/radar">📡 <span class="nav-label">Radar</span> <span class="nav-badge" id="radar-badge" style="display:none;"></span></a>
+        <a class="nav-item {% if active_page == 'playground' %}active{% endif %}" href="/playground">🎮 <span class="nav-label">Playground</span></a>
+        <a class="nav-item {% if active_page == 'optimizer' %}active{% endif %}" href="/optimizer">✨ <span class="nav-label">Optymalizator Promptów</span></a>
+        <a class="nav-item {% if active_page == 'converter' %}active{% endif %}" href="/converter">🔄 <span class="nav-label">Konwerter</span></a>
+        <a class="nav-item {% if active_page == 'translator' %}active{% endif %}" href="/translator">🌐 <span class="nav-label">Translator</span></a>
+        <a class="nav-item {% if active_page == 'finder' %}active{% endif %}" href="/finder">🔍 <span class="nav-label">Wyszukiwarka</span></a>
       </nav>
 
       <div class="nav-section-title">Praca</div>
       <nav>
-        <a class="nav-item {% if active_page == 'settings' %}active{% endif %}" href="/settings">⚙️ Ustawienia</a>
+        <a class="nav-item {% if active_page == 'workflow' %}active{% endif %}" href="/workflows">📋 <span class="nav-label">Workflow</span></a>
+        <a class="nav-item {% if active_page == 'settings' %}active{% endif %}" href="/settings">⚙️ <span class="nav-label">Ustawienia</span></a>
+        <button type="button" id="theme-toggle" class="nav-item" title="Przełącz motyw (ciemny / jasny XP)">☀️ <span class="nav-label">Jasny motyw</span></button>
       </nav>
     </aside>
     <main class="main-content">
       {% block content %}{% endblock %}
     </main>
   </div>
-</body>
+
+  <!-- Pływający dyktafon (Web Speech API) — dostępny na każdej zakładce -->
+  <button type="button" id="voice-fab" class="voice-fab" title="Dyktafon — transkrypcja głosowa">🎙</button>
+  <div id="voice-panel" class="voice-panel hidden" role="dialog" aria-label="Dyktafon">
+    <div class="voice-head">
+      <strong>🎙 Dyktafon</strong>
+      <button type="button" id="voice-close" class="icon-btn" title="Zamknij">✕</button>
+    </div>
+    <p class="voice-status muted" id="voice-status">Gotowy. Kliknij REC i mów.</p>
+    <div class="voice-controls">
+      <button type="button" id="voice-rec" class="btn btn-danger">🔴 REC</button>
+      <button type="button" id="voice-copy" class="btn btn-ghost" disabled>📋 Kopiuj</button>
+      <button type="button" id="voice-insert" class="btn btn-ghost" disabled title="Wstaw w pozycji kursora do ostatnio używanego pola">➡️ Wstaw do pola</button>
+    </div>
+    <textarea id="voice-text" class="voice-text" rows="5" placeholder="Tu pojawi się transkrypcja (możesz ją też edytować ręcznie)..."></textarea>
+    <p class="subtle voice-hint" id="voice-hint">Mowa: polski · nagranie w przeglądarce, transkrypcja na serwerze.</p>
+  </div>
+
+  <script>
+    // Zwijany sidebar: klasa na <html> + zapamiętanie w localStorage.
+    (function () {
+      var KEY = 'aux_sidebar_collapsed';
+      var root = document.documentElement;
+      var btn = document.getElementById('sidebar-toggle');
+      function syncBtn() {
+        if (btn) btn.textContent = root.classList.contains('sidebar-collapsed') ? '»' : '«';
+      }
+      syncBtn();
+      if (btn) {
+        btn.addEventListener('click', function () {
+          root.classList.toggle('sidebar-collapsed');
+          try {
+            localStorage.setItem(KEY, root.classList.contains('sidebar-collapsed') ? '1' : '0');
+          } catch (e) {}
+          syncBtn();
+        });
+      }
+    })();
+  </script>
+  <script>
+    // Globalny Escape: zamyka wyskakujące okna (modale HTMX, panel dyktafonu).
+    // (Modal ustawień optymalizatora ma własną obsługę przez Alpine —
+    // oznaczony jest atrybutem data-alpine-modal i tu go pomijamy.)
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' && e.key !== 'Esc') return;
+      var modal = document.querySelector('.modal-backdrop:not([data-alpine-modal])');
+      if (modal) { modal.remove(); return; }
+      var vp = document.getElementById('voice-panel');
+      if (vp && !vp.classList.contains('hidden')) vp.classList.add('hidden');
+    });
+  </script>
+  <script>
+    // Przełącznik motywu: data-theme na <html> + zapamiętanie w localStorage.
+    (function () {
+      var KEY = 'aux_theme';
+      var root = document.documentElement;
+      var btn = document.getElementById('theme-toggle');
+      function syncBtn() {
+        var xp = root.getAttribute('data-theme') === 'xp';
+        if (btn) btn.innerHTML = xp
+          ? '🌙 <span class="nav-label">Ciemny motyw</span>'
+          : '☀️ <span class="nav-label">Jasny motyw</span>';
+      }
+      syncBtn();
+      if (btn) {
+        btn.addEventListener('click', function () {
+          var xp = root.getAttribute('data-theme') === 'xp';
+          if (xp) root.removeAttribute('data-theme');
+          else root.setAttribute('data-theme', 'xp');
+          try { localStorage.setItem(KEY, xp ? 'dark' : 'xp'); } catch (e) {}
+          syncBtn();
+        });
+      }
+    })();
+  </script>
+  <script>
+    // Badge Radaru: liczba nieprzeczytanych nowości (cicho, jak brak routera).
+    (function () {
+      fetch('/radar/api/unseen').then(function (r) { return r.json(); }).then(function (d) {
+        var n = (d && d.count) || 0;
+        var el = document.getElementById('radar-badge');
+        if (el && n > 0) { el.textContent = n > 99 ? '99+' : n; el.style.display = ''; }
+      }).catch(function () {});
+    })();
+  </script>
+  <script src="/static/voice.js?v=2"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a39d201e3ee2731b',t:'MTc4OTE5NzM3Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

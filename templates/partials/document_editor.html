@@ -1,23 +1,20 @@
-<div id="editor-area" class="card" x-data="{ preview: {{ rendered|tojson }} }">
-  {% if saved is defined and saved %}<p style="margin:0 0 0.5rem;"><span class="chip status-ok">Zapisano ✓</span></p>{% endif %}
-  <form hx-put="/documents/{{ doc.id }}" hx-target="#editor-area" hx-swap="outerHTML">
-    <label for="doc-title">Tytuł</label>
-    <input id="doc-title" type="text" name="title" value="{{ doc.title }}">
-    <div style="display:flex; gap:1rem; margin-top:0.75rem;">
-      <div style="flex:1;">
-        <label for="doc-content">Treść (Markdown)</label>
-        <textarea id="doc-content" name="content" style="min-height:320px;"
-                  @input="preview = marked.parse($event.target.value)">{{ doc.content }}</textarea>
-      </div>
-      <div style="flex:1;">
-        <label>Podgląd na żywo</label>
-        <div class="card" style="min-height:320px; overflow:auto;" x-html="preview"></div>
-      </div>
-    </div>
-    <div style="margin-top:0.75rem; display:flex; gap:0.5rem;">
+<div id="editor-area" class="docs-editor">
+  {% if saved is defined and saved %}
+  <span class="chip status-ok docs-saved-chip">Zapisano ✓</span>
+  {% endif %}
+  <form hx-put="/documents/{{ doc.id }}" hx-target="#editor-area" hx-swap="outerHTML"
+        style="display:flex; flex-direction:column; flex:1; min-height:0; gap:0.5rem;">
+
+    <!-- Pasek narzędzi -->
+    <div class="docs-editor-bar">
+      <input id="doc-title" type="text" name="title" value="{{ doc.title }}" placeholder="Tytuł dokumentu">
       <button type="submit" class="btn btn-primary">Zapisz</button>
-      <a class="btn btn-ghost" href="/documents/{{ doc.id }}">Podgląd</a>
-      <a class="btn btn-ghost" href="/documents">Lista</a>
+      <button type="button" class="btn btn-ghost docs-delete-btn"
+              hx-delete="/documents/{{ doc.id }}" hx-confirm="Usunąć dokument?">Usuń</button>
     </div>
+
+    <!-- Edytor Markdown -->
+    <textarea id="doc-content" name="content" class="docs-editor-textarea"
+              placeholder="Treść dokumentu (Markdown)...">{{ doc.content }}</textarea>
   </form>
 </div>

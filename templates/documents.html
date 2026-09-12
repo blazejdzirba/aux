@@ -1,36 +1,53 @@
 {% extends "base.html" %}
 {% block title %}Dokumenty — AUX{% endblock %}
 {% block content %}
-<script src="https://unpkg.com/marked/marked.min.js"></script>
-<h1>Dokumenty</h1>
+<div class="docs-page">
 
-<form method="post" action="/documents" style="margin-bottom:1rem;">
-  <button type="submit" class="btn btn-primary">+ Nowy dokument</button>
-</form>
-
-<div style="display:flex; gap:1.5rem; align-items:flex-start;">
-  <div style="width:300px; flex-shrink:0;" id="doc-list">
-    {% for d in docs %}
-      {% include "partials/document_item.html" %}
-    {% else %}
-      <p class="muted">Brak dokumentów.</p>
-    {% endfor %}
+  <!-- ================= LEWA KOLUMNA: LISTA ================= -->
+  <div class="docs-list">
+    <div class="docs-list-head">
+      <strong>Dokumenty</strong>
+      <div style="display:flex; gap:0.4rem;">
+        <form method="post" action="/documents" style="margin:0;">
+          <button type="submit" class="btn btn-primary" style="padding:0.35rem 0.7rem; font-size:0.85rem;">+ Nowy</button>
+        </form>
+        <form method="post" action="/documents/upload" enctype="multipart/form-data" style="margin:0;">
+          <label class="btn" style="padding:0.35rem 0.7rem; font-size:0.85rem; cursor:pointer;" title="Wgraj plik .md z dysku">
+            ⬆ Wgraj .md
+            <input type="file" name="md_file" accept=".md,.markdown,.txt,.text" hidden onchange="this.form.submit()">
+          </label>
+        </form>
+      </div>
+    </div>
+    <div class="docs-list-items" id="doc-list">
+      {% for d in docs %}
+        {% include "partials/document_item.html" %}
+      {% else %}
+        <p class="muted" style="padding:0.5rem 0.25rem;">Brak dokumentów.</p>
+      {% endfor %}
+    </div>
   </div>
-  <div style="flex:1;" id="editor-area">
+
+  <!-- ================= PRAWA KOLUMNA: DOKUMENT ================= -->
+  <div class="docs-detail" id="editor-area">
     {% if editing is defined and editing and doc %}
       {% include "partials/document_editor.html" %}
     {% elif doc is defined and doc %}
-      <div class="card">
-        <h2>{{ doc.title }}</h2>
-        <div class="muted" style="margin-bottom:0.75rem;">{{ doc.updated_at }}</div>
-        <div>{{ rendered | safe }}</div>
-        <div style="margin-top:1rem;">
-          <a class="btn" href="/documents/{{ doc.id }}/edit">Edytuj</a>
+      <div class="docs-view">
+        <div class="docs-view-head">
+          <strong>{{ doc.title }}</strong>
+          <span class="muted" style="font-size:0.8rem;">{{ doc.updated_at[:10] }}</span>
+          <span style="flex:1;"></span>
+          <a class="btn btn-primary" style="padding:0.35rem 0.7rem; font-size:0.85rem;" href="/documents/{{ doc.id }}/edit">Edytuj</a>
         </div>
+        <div class="docs-view-body">{{ rendered | safe }}</div>
       </div>
     {% else %}
-      <div class="card muted">Wybierz dokument z listy albo utwórz nowy.</div>
+      <div class="docs-empty">
+        <p class="muted">Wybierz dokument z listy albo utwórz nowy.</p>
+      </div>
     {% endif %}
   </div>
+
 </div>
 {% endblock %}

@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+{% block title %}Optymalizator Promptów — Vibe Center{% endblock %}
+{% block content %}
+<h1>✨ Optymalizator Promptów</h1>
+<p class="muted" style="margin-top:-0.5rem;">Ulepszaj prompty, generuj pytania doprecyzowujące lub twórz prompt systemowy.</p>
+
+<div x-data="optimizerApp()" x-init="init()" x-cloak>
+
+  <!-- ================= PASEK TRYBÓW ================= -->
+  <div class="card">
+    <div class="optimizer-toolbar">
+      <button type="button" class="btn mode-btn" :class="mode === 'standard' ? 'mode-active' : 'btn-ghost'" @click="setMode('standard')">Standard</button>
+      <button type="button" class="btn mode-btn" :class="mode === 'mega' ? 'mode-active' : 'btn-ghost'" @click="setMode('mega')">Mega</button>
+      <button type="button" class="btn mode-btn" :class="mode === 'systemowy' ? 'mode-active' : 'btn-ghost'" @click="setMode('systemowy')">Kreator / Systemowy</button>
+
+      <span style="flex:1;"></span>
+
+      <button type="button" class="btn btn-ghost" @click="toggleSnippetsPanel()" :class="activeSnippetIds.length ? 'snippets-active' : ''">
+        📎 Fragmenty (<span x-text="activeSnippetIds.length"></span>)
+      </button>
+      <button type="button" class="btn btn-ghost" @click="clearAll()">🧹 Wyczyść</button>
+    </div>
+
+    <p class="muted optimizer-mode-desc" x-text="modeDescriptions[mode]"></p>
+
+    <!-- Panel fragmentów -->
+    <div class="snippets-panel" x-show="snippetsPanelOpen" x-transition style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <strong>Biblioteka fragmentów</strong>
+        <button type="button" class="btn btn-ghost" @click="snippetsPanelOpen = false">✕</button>
+      </div>
+      <p class="muted" style="margin:0 0 0.5rem; font-size:0.85rem;">Zaznacz fragmenty, które mają zostać doklejone do promptu systemowego optymalizatora.</p>
+      <template x-if="snippets.length === 0">
+        <p class="muted">Brak fragmentów — dodaj je w ⚙ Ustawieniach.</p>
+      </template>
+      <template x-for="s in snippets" :key="s.id">
+        <label class="snippet-row">
+          <input type="checkbox" :value="s.id" :checked="activeSnippetIds.includes(s.id)" @change="toggleSnippet(s.id)">
+          <span class="snippet-title" x-text="s.title"></span>
+          <span class="muted snippet-text" x-text="s.text"></span>
+        </label>
+      </template>
+      <div style="margin-top:0.75rem;">
+        <button type="button" class="btn btn-ghost" @click="openSettings()">⚙ Zarządzaj fragmentami (Ustawienia)</button>
+      </div>
+    </div>
+
+    <!-- Pole wejściowe -->
+    <label for="opt-prompt" x-text="mode === 'systemowy' ? 'Opis asystenta (luźny opis, z którego powstanie prompt systemowy)' : 'Prompt do optymalizacji'"></label>
+    <textarea id="opt-prompt" rows="6" x-model="prompt" placeholder="Wklej prompt, który mam ulepszyć..."></textarea>
+
+    <!-- Mega flow: 2 etap -->
+    <div x-show="mode === 'mega'" style="display:none;">
+      <div style="margin-top:0.75rem; display:flex; align-items:center; gap:0.5rem;">
+        <button type="button" class="btn" @click="generateQuestions()" :disabled="busy">
+          <span x-text="busy === 'questions' ? 'Generuję...' : '❓ Generuj pytania'"></span>
+        </button>
+        <span class="muted" style="font-size:0.85rem;" x-show="busy !== 'questions'" x-cloak>Odpowiedz na pytania, potem kliknij Optymalizuj.</span>
+      </div>
+
+      <template x-if="questions.length > 0">
+        <div class="mega-questions" style="margin-top:0.75rem;">
+          <template x-for="(q, i) in questions" :key="i">
+            <div style="margin-bottom:0.75rem;">
+              <label x-text="'P' + (i+1) + ': ' + q"></label>
+              <textarea rows="2" x-model="answers[i]" :placeholder="'Odpowiedź ' + (i+1) + ' (O' + (i+1) + ')'"></textarea>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+
+    <!-- Pasek akcji -->
+    <div class="optimizer-actions" style="margin-top:1rem;">
+      <button type="button" class="btn btn-primary" @click="optimize()" :disabled="busy !== null">
+        <span x-text="busy === 'optimize' ? 'Pracuję...' : (mode === 'systemowy' ? '✨ Generuj' : '✨ Optymalizuj')"></span>
+      </button>
+      <button type="button" class="btn" @click="translateInput()" :disabled="busy !== null">🌐 Przetłumacz → EN</button>
+      <button type="button" class="btn" @click="copyResult()" :disabled="!result">📋 Kopiuj</button>
+      <button type="button" class="btn btn-ghost" @click="openSettings()">⚙ Ustawienia</button>
+    </div>
+  </div>
+
+  <!-- ================= WYNIK ================= -->
+  <div class="card" id="optimizer-result" x-show="result || error || busy === 'optimize'" style="display:none; margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      <span class="chip" x-text="busy === 'optimize' ? 'optymalizuję...' : 'wynik optymalizacji'"></span>
+      <form hx-post="/prompts/save" hx-target="this" hx-swap="outerHTML" style="margin:0;"
+            x-show="result && busy === null">
+        <input type="hidden" name="content" :value="result">
+        <input type="hidden" name="title" :value="prompt.slice(0, 40)">
+        <input type="hidden" name="mode" :value="mode">
+        <button type="submit" class="btn btn-accent">💾 Zapisz prompt</button>
+      </form>
+    </div>
+    <pre style="white-space:pre-wrap; margin:0.75rem 0 0;" x-text="busy === 'optimize' ? '⏳ Model pracuje...' : (error ? '' : result)"></pre>
+    <div class="status-error" x-show="error" x-cloak style="white-space:pre-wrap; margin-top:0.5rem;" x-text="error"></div>
+  </div>
+
+  <!-- ================= MODAL USTAWIEŃ ================= -->
+  <div class="modal-backdrop" data-alpine-modal x-show="settingsOpen" x-transition.opacity
+       @click.self="settingsOpen = false"
+       @keydown.escape.window="settingsOpen && closeSettings()"
+       @keydown.enter.window="settingsEnter($event)"
+       style="display:none;">
+    <div class="modal-card optimizer-modal">
+      <h2 style="margin-top:0;">⚙ Ustawienia optymalizatora</h2>
+
+      <!-- Model -->
+      <label for="opt-model">Model optymalizatora</label>
+      <select id="opt-model" x-model="settingsModel">
+        <option value="">auto/best-free (domyślny)</option>
+        <template x-for="m in models" :key="m.id">
+          <option :value="m.model_id" x-text="(m.display_name || m.model_id) + (m.model_id !== (m.display_name || '') ? ' — ' + m.model_id : '')"></option>
+        </template>
+      </select>
+
+      <!-- Prompt systemowy -->
+      <label for="opt-sysprompt" style="margin-top:0.75rem;">Własny prompt systemowy</label>
+      <textarea id="opt-sysprompt" rows="6" x-model="settingsSystemPrompt" placeholder="(puste = domyślny)"></textarea>
+      <div style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button type="button" class="btn btn-ghost" @click="settingsSystemPrompt = defaultSystemPrompt">↩ Przywróć domyślny</button>
+      </div>
+
+      <!-- Fragmenty: CRUD -->
+      <div style="margin-top:1.25rem;">
+        <strong>Biblioteka fragmentów</strong>
+        <div style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <input type="text" id="snippet-title-input" x-model="newSnippetTitle" placeholder="Tytuł fragmentu" style="flex:1; min-width:180px;">
+          <button type="button" class="btn btn-accent" @click="addSnippet()">+ Dodaj</button>
+        </div>
+        <textarea rows="2" x-model="newSnippetText" placeholder="Treść fragmentu / klauzuli..." style="margin-top:0.5rem;"></textarea>
+
+        <div style="margin-top:0.75rem; display:flex; flex-direction:column; gap:0.5rem; max-height:220px; overflow-y:auto;">
+          <template x-for="s in snippets" :key="s.id">
+            <div class="snippet-manage-row">
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <input type="checkbox" :checked="activeSnippetIds.includes(s.id)" @change="toggleSnippet(s.id)" title="Dołącz do optymalizacji">
+                  <strong style="font-size:0.9rem;" x-text="s.title"></strong>
+                </div>
+                <div class="muted snippet-text" style="margin-left:1.6rem;" x-text="s.text"></div>
+              </div>
+              <div style="display:flex; gap:0.25rem;">
+                <button type="button" class="btn btn-ghost" @click="editSnippet(s)" title="Edytuj">✏️</button>
+                <button type="button" class="btn btn-ghost" @click="deleteSnippet(s.id)" title="Usuń">🗑️</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Stopka modala -->
+      <div style="margin-top:1.25rem; display:flex; justify-content:flex-end; gap:0.5rem;">
+        <button type="button" class="btn btn-ghost" @click="closeSettings()">Anuluj</button>
+        <button type="button" class="btn btn-primary" @click="saveSettings()">💾 Zapisz ustawienia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="optimizer-toast" x-show="toast" x-transition.opacity style="display:none;" x-text="toast"></div>
+
+</div>
+
+<script>
+function optimizerApp() {
+  return {
+    mode: 'standard',
+    prompt: '',
+    questions: [],
+    answers: ['', '', ''],
+    result: '',
+    error: '',
+    busy: null,
+    snippets: {{ snippets | tojson }},
+    activeSnippetIds: [],
+    snippetsPanelOpen: false,
+    settingsOpen: false,
+    settingsModel: {{ (settings.model or '') | tojson }},
+    settingsSystemPrompt: {{ (settings.system_prompt or '') | tojson }},
+    defaultSystemPrompt: {{ default_system_prompt | tojson }},
+    models: {{ models | tojson }},
+    newSnippetTitle: '',
+    newSnippetText: '',
+    editingSnippetId: null,
+    toast: '',
+    modeDescriptions: {
+      standard: 'Standard: przepisuje Twój prompt na precyzyjną, ulepszoną wersję.',
+      mega: 'Mega: najpierw 3 pytania doprecyzowujące, potem optymalizacja z Twoimi odpowiedziami (P1/O1, P2/O2, P3/O3).',
+      systemowy: 'Kreator / Systemowy: z luźnego opisu tworzy gotowy prompt systemowy dla asystenta AI.'
+    },
+
+    init() {},
+
+    setMode(m) {
+      this.mode = m;
+    },
+
+    clearAll() {
+      this.prompt = '';
+      this.questions = [];
+      this.answers = ['', '', ''];
+      this.result = '';
+      this.error = '';
+      this.busy = null;
+    },
+
+    toggleSnippetsPanel() {
+      this.snippetsPanelOpen = !this.snippetsPanelOpen;
+    },
+
+    toggleSnippet(id) {
+      if (this.activeSnippetIds.includes(id)) {
+        this.activeSnippetIds = this.activeSnippetIds.filter(x => x !== id);
+      } else {
+        this.activeSnippetIds.push(id);
+      }
+    },
+
+    modeLabel() {
+      return { standard: 'standard', mega: 'mega', systemowy: 'systemowy' }[this.mode] || 'standard';
+    },
+
+    async api(url, opts) {
+      const resp = await fetch(url, opts);
+      let data = {};
+      try { data = await resp.json(); } catch (e) { data = { status: 'error', error: 'HTTP ' + resp.status }; }
+      return data;
+    },
+
+    async jsonPost(url, body, method) {
+      return this.api(url, {
+        method: method || 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    },
+
+    payload(extra) {
+      return Object.assign({
+        prompt: this.prompt,
+        mode: this.mode,
+        snippet_ids: this.activeSnippetIds,
+        model: this.settingsModel || null,
+      }, extra || {});
+    },
+
+    async generateQuestions() {
+      if (!this.prompt.trim()) { this.showToast('Najpierw wpisz prompt.'); return; }
+      this.busy = 'questions';
+      this.error = '';
+      this.questions = [];
+      try {
+        const data = await this.jsonPost('/prompt-optimizer/questions', { prompt: this.prompt, model: this.settingsModel || null });
+        if (data.status === 'ok') {
+          this.questions = data.text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 3);
+          this.answers = ['', '', ''];
+        } else {
+          this.error = data.error || 'Nieznany błąd.';
+        }
+      } catch (e) {
+        this.error = String(e);
+      }
+      this.busy = null;
+    },
+
+    async optimize() {
+      if (!this.prompt.trim()) { this.showToast('Najpierw wpisz prompt.'); return; }
+      if (this.mode === 'mega' && this.questions.length === 0) {
+        this.showToast('W trybie Mega najpierw kliknij „Generuj pytania”.');
+        return;
+      }
+      this.busy = 'optimize';
+      this.error = '';
+      this.result = '';
+      try {
+        const body = this.payload({
+          questions: this.questions.join('\n'),
+          answers: this.answers.join('\n'),
+        });
+        const data = await this.jsonPost('/prompt-optimizer/optimize', body);
+        if (data.status === 'ok') {
+          this.result = data.text;
+        } else {
+          this.error = data.error || 'Nieznany błąd.';
+        }
+      } catch (e) {
+        this.error = String(e);
+      }
+      this.busy = null;
+    },
+
+    async translateInput() {
+      if (!this.prompt.trim()) { this.showToast('Najpierw wpisz tekst do tłumaczenia.'); return; }
+      this.busy = 'translate';
+      this.error = '';
+      try {
+        const data = await this.jsonPost('/prompt-optimizer/translate', { text: this.prompt, model: this.settingsModel || null });
+        if (data.status === 'ok') {
+          this.prompt = data.text;
+          this.showToast('Przetłumaczono na EN ✓');
+        } else {
+          this.error = data.error || 'Nieznany błąd.';
+        }
+      } catch (e) {
+        this.error = String(e);
+      }
+      this.busy = null;
+    },
+
+    async copyResult() {
+      if (!this.result) return;
+      try {
+        await navigator.clipboard.writeText(this.result);
+      } catch (e) {
+        // fallback dla starszych przeglądarek / braku uprawnień
+        const ta = document.createElement('textarea');
+        ta.value = this.result;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      this.showToast('Skopiowano! ✓');
+    },
+
+    openSettings() {
+      this.snippetsPanelOpen = false;
+      this.settingsOpen = true;
+    },
+
+    closeSettings() {
+      this.settingsOpen = false;
+      this.newSnippetTitle = '';
+      this.newSnippetText = '';
+      this.editingSnippetId = null;
+    },
+
+    // Enter w modalu ustawień: textarea i przyciski pomijamy (własne akcje),
+    // tytuł fragmentu dodaje fragment, reszta pól zapisuje ustawienia.
+    settingsEnter(e) {
+      if (!this.settingsOpen) return;
+      var modal = document.querySelector('[data-alpine-modal]');
+      if (!e.target || (modal && !modal.contains(e.target))) return;
+      var tag = (e.target.tagName || '').toUpperCase();
+      if (tag === 'TEXTAREA' || tag === 'BUTTON') return;
+      if (e.target.id === 'snippet-title-input') this.addSnippet();
+      else this.saveSettings();
+    },
+
+    async saveSettings() {
+      const data = await this.jsonPost('/prompt-optimizer/settings', {
+        model: this.settingsModel,
+        system_prompt: this.settingsSystemPrompt,
+      });
+      if (data.status === 'ok') {
+        this.showToast('Zapisano ustawienia ✓');
+        this.closeSettings();
+      } else {
+        this.showToast('Błąd zapisu ustawień: ' + (data.error || '?'));
+      }
+    },
+
+    async addSnippet() {
+      if (!this.newSnippetTitle.trim() || !this.newSnippetText.trim()) {
+        this.showToast('Fragment wymaga tytułu i treści.');
+        return;
+      }
+      const body = { title: this.newSnippetTitle, text: this.newSnippetText };
+      const url = this.editingSnippetId
+        ? '/prompt-optimizer/snippets/' + this.editingSnippetId
+        : '/prompt-optimizer/snippets';
+      const data = await this.jsonPost(url, body, this.editingSnippetId ? 'PUT' : 'POST');
+      if (data.status === 'ok') {
+        this.snippets = data.snippets;
+        this.newSnippetTitle = '';
+        this.newSnippetText = '';
+        this.editingSnippetId = null;
+      } else {
+        this.showToast('Błąd zapisu fragmentu: ' + (data.error || '?'));
+      }
+    },
+
+    editSnippet(s) {
+      this.editingSnippetId = s.id;
+      this.newSnippetTitle = s.title;
+      this.newSnippetText = s.text;
+    },
+
+    async deleteSnippet(id) {
+      const data = await this.api('/prompt-optimizer/snippets/' + id, { method: 'DELETE' });
+      if (data.status === 'ok') {
+        this.snippets = data.snippets;
+        this.activeSnippetIds = this.activeSnippetIds.filter(x => x !== id);
+      } else {
+        this.showToast('Błąd usuwania: ' + (data.error || '?'));
+      }
+    },
+
+    showToast(msg) {
+      this.toast = msg;
+      setTimeout(() => { this.toast = ''; }, 2200);
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -5,16 +5,32 @@ Prompty systemowe skopiowane 1:1 z micro-prompt-optimizer (przez
 ai-workspace-app/prompt_optimizer/engine.py). Dostosowane do AUX:
 - bez zależności od repo.models — provider omniroute jest domyślny,
 - klucz prosto z config (get_omniroute_api_key),
-- HTTP synchronicznie przez requests na stały BASE_URL.
+- endpoint z Ustawień (get_omniroute_base) — ten sam co Playground i testy,
+- HTTP synchronicznie przez requests.
 """
+import sqlite3
+
 import requests
 
-from config import get_omniroute_api_key, get_optimizer_model_id
+from config import get_omniroute_api_key, get_optimizer_model_id, get_db_path, get_omniroute_base
 
 DEFAULT_TIMEOUT = 60
 FALLBACK_MODEL = "auto/best-free"
-BASE_URL = "https://openrouter.ai/api"
-CHAT_ENDPOINT = "/v1/chat/completions"
+# Endpoint NIE jest już hardkodowany — bierzemy go z Ustawień (Vault/config),
+# żeby optymalizator trafiał w ten sam gateway co Playground i testy modeli.
+CHAT_PATH = "/chat/completions"
+
+# Klucze w tabeli optimizer_settings
+SETTING_MODEL = "optimizer_model"
+SETTING_SYSTEM_PROMPT = "optimizer_system_prompt"
+
+# Tłumaczenie promptu na angielski — zwraca WYŁĄCZNIE przetłumaczony tekst.
+TRANSLATE_SYSTEM_PROMPT = (
+    "You are a professional translator. Translate the user's text into English. "
+    "Preserve the original meaning, tone and formatting (line breaks, lists, code blocks). "
+    "If the text contains code, commands or variable names, leave them untouched. "
+    "Respond with ONLY the translated text — no comments, no explanations, no quotes."
+)
 
 # ------------------------------------------------------------
 # Prompty systemowe — defaults 1:1 z micro-prompt-optimizer
@@ -92,14 +108,46 @@ def _get_api_key() -> str:
     return key
 
 
+# ------------------------------------------------------------
+# Ustawienia z DB (model + customowy prompt systemowy)
+# ------------------------------------------------------------
+def get_setting(key: str, default: str = "") -> str:
+    try:
+        conn = sqlite3.connect(get_db_path())
+        row = conn.execute(
+            "SELECT value FROM optimizer_settings WHERE key = ?", (key,)
+        ).fetchone()
+        conn.close()
+        return row[0] if row else default
+    except Exception:
+        return default
+
+
+def set_setting(key: str, value: str) -> None:
+    conn = sqlite3.connect(get_db_path())
+    conn.execute(
+        "INSERT INTO optimizer_settings (key, value) VALUES (?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (key, value),
+    )
+    conn.commit()
+    conn.close()
+
+
 def _resolve_model(explicit: str | None) -> str:
-    return explicit or get_optimizer_model_id() or FALLBACK_MODEL
+    # Priorytet: model z żądania → model z ustawień optymalizatora (DB) →
+    # stary config.json → fallback.
+    if explicit:
+        return explicit
+    db_model = get_setting(SETTING_MODEL)
+    return db_model or get_optimizer_model_id() or FALLBACK_MODEL
 
 def _chat(system_prompt: str, user_content: str,
           model: str | None = None, timeout: int = DEFAULT_TIMEOUT,
           max_tokens: int = 2048) -> str:
     model = _resolve_model(model)
-    url = BASE_URL.rstrip("/") + CHAT_ENDPOINT
+    # Ten sam endpoint co Playground (Ustawienia / Vault), kończący się na /v1.
+    url = get_omniroute_base().rstrip("/") + CHAT_PATH
     headers = {"Authorization": f"Bearer {_get_api_key()}", "Content-Type": "application/json"}
     payload = {
         "model": model,
@@ -164,26 +212,46 @@ def _pair_answers(questions: str, answers: str) -> list[tuple[str, str]]:
 # ------------------------------------------------------------
 # API publiczne (sync — wywoływane z endpointów FastAPI)
 # ------------------------------------------------------------
-def optimize_prompt(user_prompt: str, snippets=None) -> str:
-    system_prompt = _apply_snippets(SYSTEM_PROMPT_BASE, snippets)
+def _effective_system_prompt(default: str, override: str | None, snippets) -> str:
+    sp = (override or "").strip() or default
+    return _apply_snippets(sp, snippets)
+
+
+def optimize_prompt(user_prompt: str, snippets=None, model: str | None = None,
+                    system_prompt: str | None = None) -> str:
+    system = _effective_system_prompt(SYSTEM_PROMPT_BASE, system_prompt, snippets)
     user_content = _frame_for_optimization(user_prompt)
-    return _chat(system_prompt, user_content)
+    return _chat(system, user_content, model=model)
 
 
-def optimize_prompt_mega(user_prompt: str, questions: str, answers: str, snippets=None) -> str:
+def optimize_prompt_mega(user_prompt: str, questions: str, answers: str,
+                         snippets=None, model: str | None = None,
+                         system_prompt: str | None = None) -> str:
     """Tryb mega: odpowiedzi na 3 pytania doprecyzowujące wplataamy w prompt."""
-    system_prompt = _apply_snippets(SYSTEM_PROMPT_BASE + MEGA_SYSTEM_ADDENDUM, snippets)
+    system = _effective_system_prompt(
+        SYSTEM_PROMPT_BASE + MEGA_SYSTEM_ADDENDUM, system_prompt, snippets)
     extra = "\n".join(f"P: {q}\nO: {a}" for q, a in _pair_answers(questions, answers))
     user_content = _frame_for_optimization(user_prompt, extra_context=extra or None)
-    return _chat(system_prompt, user_content)
+    return _chat(system, user_content, model=model)
 
 
-def create_system_prompt(description: str, snippets=None) -> str:
-    system_prompt = _apply_snippets(SYSTEM_PROMPT_CREATE_INSTRUCTION, snippets)
-    return _chat(system_prompt, description)
+def create_system_prompt(description: str, snippets=None, model: str | None = None,
+                         system_prompt: str | None = None) -> str:
+    system = _effective_system_prompt(
+        SYSTEM_PROMPT_CREATE_INSTRUCTION, system_prompt, snippets)
+    return _chat(system, description, model=model)
 
 
-def generate_questions(user_prompt: str) -> str:
+def generate_questions(user_prompt: str, model: str | None = None) -> str:
     # modele reasoning zużywają dużo tokenów na "myślenie" przed odpowiedzią
-    raw = _chat(QUESTIONS_SYSTEM_PROMPT, user_prompt, max_tokens=1500)
+    raw = _chat(QUESTIONS_SYSTEM_PROMPT, user_prompt, model=model, max_tokens=1500)
     return "\n".join(line.strip(" -•\t") for line in raw.splitlines() if line.strip())
+
+
+def translate_prompt(text: str, model: str | None = None) -> str:
+    """Tłumaczy podany tekst na angielski (zwraca sam przetłumaczony tekst)."""
+    text = (text or "").strip()
+    if not text:
+        raise RuntimeError("Brak tekstu do tłumaczenia.")
+    raw = _chat(TRANSLATE_SYSTEM_PROMPT, text, model=model, max_tokens=2000)
+    return raw.strip()

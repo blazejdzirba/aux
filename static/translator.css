@@ -1,0 +1,117 @@
+/* ============================================================
+   Vibe Center — Translator PL<->EN (wklejasz tekst, model tłumaczy 1:1).
+   Układ korzysta z globalnych .card / .btn / .tabs / .tab-btn.
+   ============================================================ */
+.tr-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+.tr-dir {
+  display: flex;
+  gap: 0.25rem;
+}
+.tr-swap {
+  font-weight: 700;
+}
+.tr-model {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tr-model select {
+  min-width: 260px;
+}
+.tr-info {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+}
+.tr-panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+.tr-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.tr-pane-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tr-target-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.tr-pane textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 190px;
+  max-height: 340px;
+  field-sizing: content;
+  overflow-y: auto;
+  font-family: inherit;
+  line-height: 1.5;
+}
+@media (max-width: 900px) {
+  .tr-panes {
+    grid-template-columns: 1fr;
+  }
+  .tr-model select {
+    min-width: 0;
+    flex: 1;
+  }
+}
+
+/* ---------- Długie teksty: pasek postępu ---------- */
+.tr-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.tr-progress-track {
+  flex: 1;
+  height: 10px;
+  background: var(--color-bg-soft, #26262c);
+  border: 1px solid var(--color-border, #2c2c34);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.tr-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #d4af37, #f5d76e);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+.tr-progress-label {
+  font-size: 0.85rem;
+  color: var(--color-fg-muted, #b9b4a8);
+  white-space: nowrap;
+}
+
+/* ---------- Podejrzane części ---------- */
+.tr-warnings {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-warning, #8a6d1c);
+  border-radius: 6px;
+  background: rgba(212, 175, 55, 0.08);
+}
+.tr-warnings p { margin: 0 0 0.5rem 0; }
+.tr-warnings ul { list-style: none; margin: 0; padding: 0; }
+.tr-warnings li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+}
