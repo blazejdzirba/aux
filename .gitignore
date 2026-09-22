@@ -31,3 +31,24 @@ env/
 Thumbs.db
 .idea/
 .vscode/config.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Lokalne klucze
+config.json
+.env
+.env.*
+!.env.example
+
+# Baza
+*.db
+*.sqlite3
+
+# OS / IDE
+.DS_Store
+.vscode/settings.json
+.idea/
