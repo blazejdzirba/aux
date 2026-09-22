@@ -30,4 +30,4 @@ env/
 .DS_Store
 Thumbs.db
 .idea/
-.vscode/
+.vscode/config.json
